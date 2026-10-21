@@ -13,7 +13,7 @@ import traceback
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session as DbSession
 from sqlalchemy.orm import selectinload, sessionmaker
 
@@ -105,6 +105,10 @@ def is_due(db: DbSession, settings: Settings, now: datetime | None = None) -> tu
     now = now or utcnow()
     mode = current_mode(db, now)
     minutes = interval_for(mode, settings)
+    # While bill texts are still being downloaded for the first time, keep going
+    # hourly so full-text detection completes within hours, not weeks.
+    if settings.max_pdfs_per_run > 0 and bills_needing_text(db) > 0:
+        minutes = min(minutes, settings.polling.active_session)
     last = last_ok_run(db)
     if last is None:
         return True, mode, minutes
@@ -619,6 +623,6 @@ def monitor_health(db: DbSession, settings: Settings, now: datetime | None = Non
 def bills_needing_text(db: DbSession) -> int:
     return db.scalar(
         select(func.count()).select_from(BillVersion).where(
-            or_(BillVersion.text_status == "pending")
+            BillVersion.text_status == "pending", BillVersion.document_url.is_not(None)
         )
     ) or 0

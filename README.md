@@ -57,7 +57,7 @@ streamlit run streamlit_app.py     # opens the dashboard at http://localhost:850
 ```
 
 Run `python -m ndwatch monitor --force` again whenever you want fresh data
-locally; bill texts are read 120 per run, so repeat it a few times (or set
+locally; bill texts are read 400 per run, so repeat it a few times (or set
 `NDWATCH_MAX_PDFS_PER_RUN=2000`) to complete full-text detection.
 
 Settings are environment variables; see `.env.example`.

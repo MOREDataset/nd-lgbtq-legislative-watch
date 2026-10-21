@@ -215,3 +215,15 @@ def test_testimony_and_rules_collected(factory, settings):
         rule = db.get(SourceFact, "testimony_deadline_rule")
         assert "one hour before" in rule.value
         assert db.get(SourceFact, "how_to_submit_testimony_url").value.endswith("how_to_submit_bill_testimony.pdf")
+
+
+def test_backlog_of_bill_text_keeps_hourly_pace(factory, settings):
+    import dataclasses
+
+    from ndwatch.monitor import is_due
+
+    s = dataclasses.replace(settings, max_pdfs_per_run=1)  # leaves a backlog after the first run
+    run_cycle(factory, DictFetcher(responses(syn.bills(*base_bills()))), s, force=True)
+    with factory() as db:
+        _, _, minutes = is_due(db, s)
+    assert minutes == s.polling.active_session

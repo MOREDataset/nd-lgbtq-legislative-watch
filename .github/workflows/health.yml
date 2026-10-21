@@ -4,7 +4,7 @@ name: Monitoring health check
 
 on:
   schedule:
-    - cron: "43 */6 * * *"
+    - cron: "47 */6 * * *"
   workflow_dispatch:
 
 permissions:

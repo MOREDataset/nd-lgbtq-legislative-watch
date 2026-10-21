@@ -121,7 +121,7 @@ def default_rules() -> Rules:
     return load_rules()
 
 
-_LINE_NUMBER = re.compile(r"(?m)^\s*\d{1,2}\s+")
+_LINE_NUMBER = re.compile(r"(?m)^[ \t]*\d{1,2}(?:[ \t]+|$)")
 
 
 def normalize_text(text: str) -> str:

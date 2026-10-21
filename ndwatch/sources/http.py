@@ -122,10 +122,12 @@ class ReplayFetcher:
     def get(self, url: str) -> FetchResult:
         self.requested.append(url)
         path = self.directory / url_to_filename(url)
-        if path.exists():
-            return FetchResult(
-                url=url, ok=True, status=200, content=path.read_bytes(), fetched_at=now_utc()
-            )
+        gz = path.with_name(path.name + ".gz")
+        if path.exists() or gz.exists():
+            import gzip
+
+            content = path.read_bytes() if path.exists() else gzip.decompress(gz.read_bytes())
+            return FetchResult(url=url, ok=True, status=200, content=content, fetched_at=now_utc())
         return FetchResult(
             url=url, ok=False, status=404, content=b"", fetched_at=now_utc(), error="not in replay set"
         )

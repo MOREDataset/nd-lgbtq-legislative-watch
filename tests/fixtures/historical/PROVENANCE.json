@@ -1,0 +1,110 @@
+[
+  {
+    "url": "https://ndlegis.gov/api/assembly/69-2025/data/sessions.json",
+    "retrieved_at": "2026-10-21T18:00:57.944777+00:00",
+    "original_sha256": "187ab477d1d7cc35ee5a059ff08fdbd419b1ffabd6b40db68b9f7179d85fda1b",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/api/assembly/69-2025/data/members.json",
+    "retrieved_at": "2026-10-21T18:01:00.943552+00:00",
+    "original_sha256": "a656aa17eae4569014f1b08e1db62732a58f4e0db0dfe9aea9c04be5a6addba9",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/api/data/assemblies.json",
+    "retrieved_at": "2026-10-21T18:00:55.147697+00:00",
+    "original_sha256": "0c4b2854d197dcbd4131e7e20be51c448cb55d061fa73a78cbf0f4dd83cc47a0",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/api/assembly/69-2025/data/bills.json",
+    "retrieved_at": "2026-10-21T18:01:00.561524+00:00",
+    "original_sha256": "051cea830c735de9148b0f1272cfd107c358e917f75a64e3b7f066f0e5136972",
+    "note": "subset: HB 1144, HB 1217, HB 1430, SB 2307, HB 1001, SB 2392 (2025 Regular Session)"
+  },
+  {
+    "url": "https://ndlegis.gov/api/assembly/69-2025/data/roll_call.json",
+    "retrieved_at": "2026-10-21T18:01:04.569947+00:00",
+    "original_sha256": "f37898bd277d560a9133a6ef7dd5877a7f2b272c7a1f869d1e18fc933ebb31f8",
+    "note": "subset: roll calls for the bills above"
+  },
+  {
+    "url": "https://ndlegis.gov/assembly/69-2025/regular/bill-testimony/bt1144.html",
+    "retrieved_at": "2026-10-21T18:01:23.688140+00:00",
+    "original_sha256": "2c60fba8fe81b031ddddea845e51d7243541a124011a5bae822c9860a9877156",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/assembly/69-2025/regular/bill-testimony/bt1217.html",
+    "retrieved_at": "2026-10-21T18:01:38.631297+00:00",
+    "original_sha256": "838f56acff3488c28f127183e12027931d4cebb30ab4ec8b1c61e180d6315571",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/assembly/69-2025/regular/bill-testimony/bt1430.html",
+    "retrieved_at": "2026-10-21T18:01:31.148949+00:00",
+    "original_sha256": "337be8721362b269b992ddd2747c282863633dcb673d05a328d9f71d4696a767",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/assembly/69-2025/regular/documents/25-0440-03000.pdf",
+    "retrieved_at": "2026-10-21T18:01:11.564754+00:00",
+    "original_sha256": "4663828b4cf0aa3786e426258f35f9cb8106d124475f72dabe78d43f482aa940",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/assembly/69-2025/regular/documents/25-0440-07000.pdf",
+    "retrieved_at": "2026-10-21T18:01:13.067060+00:00",
+    "original_sha256": "5071a19e5254126c27eac0d88cf6f2517cfe70f8602626177e54b529cf717918",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/assembly/69-2025/regular/documents/25-0552-07000.pdf",
+    "retrieved_at": "2026-10-21T18:01:17.572681+00:00",
+    "original_sha256": "561e418d9d9dd377cf9212b00dddb89f38a5bbf00699aa66bd4d8839ed72dd0a",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/assembly/69-2025/regular/documents/25-0885-01000.pdf",
+    "retrieved_at": "2026-10-21T18:01:14.577625+00:00",
+    "original_sha256": "34f3724080fd160426fe72fd4abee90b0bd4f37e1c4c7090d177c6302d2526a9",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/assembly/69-2025/regular/documents/25-0885-02000.pdf",
+    "retrieved_at": "2026-10-21T18:01:16.068102+00:00",
+    "original_sha256": "94ec80da8ca46ce91d074338e5f228a2cfde29c2faa2ce1976c8497ec44821a7",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/assembly/69-2025/regular/documents/25-0915-02000.pdf",
+    "retrieved_at": "2026-10-21T18:01:05.441734+00:00",
+    "original_sha256": "710322e85977f3861e23d743b892476083fbc4161e5099211c86c40becda4fe0",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/assembly/69-2025/regular/documents/25-0915-02004m.pdf",
+    "retrieved_at": "2026-10-21T18:01:07.020663+00:00",
+    "original_sha256": "7f0998d6bae08ddb2366920cd660e428359da9964bb92a240e7506166f357a33",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/assembly/69-2025/regular/documents/25-0915-03000.pdf",
+    "retrieved_at": "2026-10-21T18:01:08.564977+00:00",
+    "original_sha256": "66d695a91b59a2ecbfe96c60571d99fd918315d48cfab9b577d0a229e9a0d36f",
+    "note": ""
+  },
+  {
+    "url": "https://ndlegis.gov/assembly/69-2025/regular/documents/25-0915-04000.pdf",
+    "retrieved_at": "2026-10-21T18:01:10.067258+00:00",
+    "original_sha256": "349183ce20b978c5367ade71e67935718c6b7483780891858bdb9e1f281b09eb",
+    "note": ""
+  },
+  {
+    "url": "https://www.ndlegis.gov/legend/committee/hearings/public-schedule/",
+    "retrieved_at": "2026-10-21T18:00:56.827325+00:00",
+    "original_sha256": "bea4ef5c65a6271f24630af18c304eb150702af8fa67619a32c764c123608b47",
+    "note": ""
+  }
+]

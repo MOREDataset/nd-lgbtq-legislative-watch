@@ -201,15 +201,19 @@ def parse_public_schedule(html: str, page_url: str = PUBLIC_SCHEDULE_URL) -> Sch
     for tag in soup(["script", "style", "noscript"]):
         tag.decompose()
     text = re.sub(r"\s+", " ", soup.get_text(" "))
-    sentences = re.split(r"(?<=[.!?])\s+", text)
-    deadline = next(
-        (s.strip() for s in sentences if re.search(r"deadline", s, re.I) and re.search(r"testimony", s, re.I)),
-        None,
-    )
-    work = next(
-        (s.strip() for s in sentences if re.search(r"work session", s, re.I) and re.search(r"testimony", s, re.I)),
-        None,
-    )
+
+    def paragraph(*words: str) -> str | None:
+        # Read the notice paragraph itself (without its bold heading), not the menus.
+        for p in soup.find_all("p"):
+            body = p.get_text(" ")
+            if all(re.search(w, body, re.I) for w in words):
+                for b in p.find_all(["b", "strong"]):
+                    b.extract()
+                return re.sub(r"\s+", " ", p.get_text(" ")).strip() or None
+        return None
+
+    deadline = paragraph("deadline", "testimony")
+    work = paragraph("work session", "testimony")
     how = None
     submit = None
     for a in soup.find_all("a", href=True):

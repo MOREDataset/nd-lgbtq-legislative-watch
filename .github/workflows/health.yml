@@ -1,0 +1,51 @@
+# Independent check that monitoring is actually happening ("missed-run detection").
+# Fails, and opens an issue, if no successful monitoring run is recorded recently.
+name: Monitoring health check
+
+on:
+  schedule:
+    - cron: "43 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Skip until the database is configured
+        id: cfg
+        run: echo "ready=$([ -n "$DATABASE_URL" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.ready == 'true'
+      - uses: actions/setup-python@v5
+        if: steps.cfg.outputs.ready == 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[postgres]"
+        if: steps.cfg.outputs.ready == 'true'
+      - run: python -m ndwatch health
+        if: steps.cfg.outputs.ready == 'true'
+      - name: Open an issue if monitoring is stale
+        if: failure() && steps.cfg.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          existing=$(gh issue list --label monitor-failure --state open --json number --jq 'length')
+          if [ "$existing" = "0" ]; then
+            gh label create monitor-failure --color B60205 --description "Automatic monitoring problem" 2>/dev/null || true
+            gh issue create --label monitor-failure --title "Monitoring is stale" \
+              --body "No successful monitoring run was recorded recently. Details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+      - name: Make sure the monitor schedule is enabled
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/monitor.yml/enable" || true

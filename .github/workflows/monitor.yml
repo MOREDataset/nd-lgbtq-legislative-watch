@@ -1,0 +1,82 @@
+# Checks official North Dakota legislative sources and updates the database.
+# Runs every hour at :17 (avoiding the top of the hour, when GitHub's scheduler
+# is busiest). The program itself decides whether a full check is due, based on
+# whether the Legislature is in session (see NDWATCH_POLL_* settings), so
+# off-season runs finish in seconds.
+name: Monitor official sources
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Run a full check even if one is not due"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  issues: write     # to open an issue when monitoring fails
+  actions: write    # to keep this scheduled workflow enabled (see last step)
+
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NDWATCH_EXTRA_ASSEMBLIES: ${{ vars.NDWATCH_EXTRA_ASSEMBLIES }}
+      NDWATCH_POLL_ACTIVE_MIN: ${{ vars.NDWATCH_POLL_ACTIVE_MIN }}
+      NDWATCH_POLL_PREFILING_MIN: ${{ vars.NDWATCH_POLL_PREFILING_MIN }}
+      NDWATCH_POLL_OFFSEASON_MIN: ${{ vars.NDWATCH_POLL_OFFSEASON_MIN }}
+      NDWATCH_MAX_PDFS_PER_RUN: ${{ vars.NDWATCH_MAX_PDFS_PER_RUN }}
+    steps:
+      - name: Check configuration
+        id: cfg
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::warning::DATABASE_URL secret is not set yet, so there is nowhere to store results. See docs/DEPLOYMENT.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.ready == 'true'
+      - uses: actions/setup-python@v5
+        if: steps.cfg.outputs.ready == 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[postgres]"
+        if: steps.cfg.outputs.ready == 'true'
+      - name: Run monitoring cycle (one retry on failure)
+        if: steps.cfg.outputs.ready == 'true'
+        run: |
+          FORCE=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force }}" = "true" ]; then FORCE="--force"; fi
+          python -m ndwatch monitor --trigger "${{ github.event_name }}" $FORCE \
+            || (echo "First attempt failed; retrying in 60s"; sleep 60; python -m ndwatch monitor --trigger retry $FORCE)
+      - name: Open an issue if monitoring failed
+        if: failure() && steps.cfg.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          existing=$(gh issue list --label monitor-failure --state open --json number --jq 'length')
+          if [ "$existing" = "0" ]; then
+            gh label create monitor-failure --color B60205 --description "Automatic monitoring problem" 2>/dev/null || true
+            gh issue create --label monitor-failure \
+              --title "Monitoring run failed" \
+              --body "The scheduled check of official sources failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. The dashboard keeps showing stored data and displays a staleness warning."
+          fi
+      - name: Keep this schedule enabled
+        # GitHub turns off schedules in repositories with no activity for 60 days.
+        # Re-enabling once a day prevents monitoring from silently stopping.
+        if: always() && github.event_name == 'schedule' && github.run_number % 24 == 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/monitor.yml/enable" || true

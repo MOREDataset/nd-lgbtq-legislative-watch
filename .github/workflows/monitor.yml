@@ -76,7 +76,10 @@ jobs:
       - name: Keep this schedule enabled
         # GitHub turns off schedules in repositories with no activity for 60 days.
         # Re-enabling once a day prevents monitoring from silently stopping.
-        if: always() && github.event_name == 'schedule' && github.run_number % 24 == 0
+        if: always() && github.event_name == 'schedule'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/monitor.yml/enable" || true
+        run: |
+          if [ "$(date -u +%H)" = "06" ]; then
+            gh api -X PUT "repos/${{ github.repository }}/actions/workflows/monitor.yml/enable" || true
+          fi

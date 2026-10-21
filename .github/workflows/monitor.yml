@@ -7,7 +7,7 @@ name: Monitor official sources
 
 on:
   schedule:
-    - cron: "17 * * * *"
+    - cron: "23 * * * *"
   workflow_dispatch:
     inputs:
       force:

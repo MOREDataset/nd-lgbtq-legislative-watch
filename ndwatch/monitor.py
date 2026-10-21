@@ -241,11 +241,20 @@ def _cycle_body(factory, api: LegislativeApi, fetcher: Fetcher, settings: Settin
 
     for year in targets:
         _ingest_assembly(factory, api, settings, report, year)
+        log.info("step done: %s | %s", '_ingest_assembly', report.notes[-1] if report.notes else "")
 
-    _collect_schedule_rules(factory, fetcher, report)
-    _collect_bill_text(factory, fetcher, settings, report)
+    # Title/summary relevance first so the dashboard fills in even if a later step is slow,
+    # then again after new bill text has been read.
     _update_relevance(factory, report)
+    log.info("step done: %s | %s", '_update_relevance', report.notes[-1] if report.notes else "")
+    _collect_schedule_rules(factory, fetcher, report)
+    log.info("step done: %s | %s", '_collect_schedule_rules', report.notes[-1] if report.notes else "")
+    _collect_bill_text(factory, fetcher, settings, report)
+    log.info("step done: %s | %s", '_collect_bill_text', report.notes[-1] if report.notes else "")
+    _update_relevance(factory, report)
+    log.info("step done: %s | %s", '_update_relevance', report.notes[-1] if report.notes else "")
     _collect_testimony(factory, fetcher, settings, report)
+    log.info("step done: %s | %s", '_collect_testimony', report.notes[-1] if report.notes else "")
 
 
 def _ingest_assembly(factory, api: LegislativeApi, settings: Settings, report: CycleReport, year: str) -> None:

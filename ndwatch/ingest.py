@@ -12,7 +12,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import insert, select
 from sqlalchemy.orm import Session as DbSession
 
 from ndwatch.db.schema import (
@@ -78,12 +78,19 @@ class EventWriter:
         self.backfill = backfill
         self._seen: set[str] = set()
         self._preloaded = False
+        self.roll_call_ids: set[str] | None = None
         self.written = 0
 
     def preload(self) -> None:
-        """Load all existing event keys at once (one query instead of one per event)."""
+        """Load existing event keys and roll call ids at once (one query instead of one per row)."""
         self._seen.update(self.db.scalars(select(Event.dedupe_key)))
+        self.roll_call_ids = set(self.db.scalars(select(RollCall.id)))
         self._preloaded = True
+
+    def has_roll_call(self, rc_id: str) -> bool:
+        if self.roll_call_ids is None:
+            self.roll_call_ids = set(self.db.scalars(select(RollCall.id)))
+        return rc_id in self.roll_call_ids
 
     def exists(self, key: str) -> bool:
         if key in self._seen:
@@ -276,8 +283,9 @@ def _sync_sponsors(db: DbSession, bill: Bill, api: ApiBill) -> None:
                 new_value=json.dumps([n[1] for n in new]), changed_at=utcnow(),
             )
         )
-    bill.sponsors.clear()
-    db.flush()
+    if old:
+        bill.sponsors.clear()
+        db.flush()
     for i, s in enumerate(api.sponsors):
         bill.sponsors.append(
             BillSponsor(position=i, sponsor_id=s.id, name=s.name, type=s.type, chamber=s.chamber, primary=s.primary)
@@ -326,7 +334,8 @@ def _sync_actions(db: DbSession, bill: Bill, api: ApiBill, writer: EventWriter, 
         row.bill_version = a.bill_version
         row.roll_call_id = rc.id if rc else None
         # Make sure a roll call summary exists even before roll_call.json is read.
-        if rc and db.get(RollCall, rc.id) is None:
+        if rc and not writer.has_roll_call(rc.id):
+            writer.roll_call_ids.add(rc.id)
             db.add(
                 RollCall(
                     id=rc.id, session_id=bill.session_id, bill_uid=bill.uid, bill_name=bill.name,
@@ -336,7 +345,6 @@ def _sync_actions(db: DbSession, bill: Bill, api: ApiBill, writer: EventWriter, 
                     first_seen_at=now,
                 )
             )
-            db.flush()
     bill.last_action_date = max((r.date for r in bill.actions if r.date), default=None)
 
 
@@ -369,7 +377,7 @@ def _sync_versions(db: DbSession, bill: Bill, api: ApiBill, writer: EventWriter,
                     )
                 )
                 # Summaries written for older versions now need another look.
-                for s in db.scalars(select(Summary).where(Summary.bill_uid == bill.uid)):
+                for s in [] if writer.backfill else db.scalars(select(Summary).where(Summary.bill_uid == bill.uid)):
                     if s.lc_number != v.lc_number:
                         s.needs_review = True
         row.position = pos
@@ -510,6 +518,7 @@ def upsert_roll_calls(db: DbSession, roll_calls: list[ApiRollCall]) -> int:
     n = 0
     complete = set(db.scalars(select(MemberVote.roll_call_id).distinct()))
     existing = {r.id: r for r in db.scalars(select(RollCall))}
+    votes: list[dict] = []
     for rc in roll_calls:
         if rc.id in complete:
             continue
@@ -528,10 +537,14 @@ def upsert_roll_calls(db: DbSession, roll_calls: list[ApiRollCall]) -> int:
         row.division = rc.division
         row.passed = rc.passed
         row.total_yeas, row.total_nays, row.total_absent = rc.total_yeas, rc.total_nays, rc.total_absent
-        db.flush()
-        for mv in rc.member_votes:
-            db.add(MemberVote(roll_call_id=rc.id, member_id=mv.member_id, name=mv.name, vote=mv.vote))
+        votes.extend(
+            {"roll_call_id": rc.id, "member_id": mv.member_id, "name": mv.name, "vote": mv.vote}
+            for mv in rc.member_votes
+        )
         n += 1
+    db.flush()  # roll calls first, then all individual votes in one bulk insert
+    for i in range(0, len(votes), 5000):
+        db.execute(insert(MemberVote), votes[i : i + 5000])
     return n
 
 

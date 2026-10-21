@@ -129,10 +129,7 @@ def century_code_links(title: str | None) -> list[tuple[str, str]]:
     out = []
     for m in re.finditer(r"\b(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)(?:-(\d+(?:\.\d+)?))?\b", title):
         t, c, s = m.group(1), m.group(2), m.group(3)
-        if s:
-            label = f"Section {t}-{c}-{s}"
-        else:
-            label = f"Chapter {t}-{c}"
+        label = f"Section {t}-{c}-{s}" if s else f"Chapter {t}-{c}"
         # The official code is published as one PDF per chapter.
         url = f"https://ndlegis.gov/cencode/t{t.replace('.', '-')}c{c.replace('.', '-')}.pdf"
         out.append((label, url))

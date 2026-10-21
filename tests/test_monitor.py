@@ -6,7 +6,16 @@ import copy
 
 from sqlalchemy import func, select
 
-from ndwatch.db.schema import Bill, Event, Hearing, MonitorRun, Relevance, SourceFact, Summary, Testimony
+from ndwatch.db.schema import (
+    Bill,
+    Event,
+    Hearing,
+    MonitorRun,
+    Relevance,
+    SourceFact,
+    Summary,
+    Testimony,
+)
 from ndwatch.monitor import run_cycle
 from ndwatch.sources.http import DictFetcher
 from ndwatch.timeutil import utcnow

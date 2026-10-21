@@ -4,6 +4,10 @@
 name: Collect source samples
 
 on:
+  # Also runs when the request file changes, so samples can be refreshed by a commit.
+  push:
+    branches: [main]
+    paths: [".github/sample-request.txt"]
   workflow_dispatch:
     inputs:
       assemblies:
@@ -28,11 +32,12 @@ jobs:
       - run: pip install -e .
       - name: Download samples
         env:
-          ASSEMBLIES: ${{ inputs.assemblies }}
+          ASSEMBLIES: ${{ inputs.assemblies || '69-2025' }}
           EXTRA: ${{ inputs.extra_urls }}
         run: |
           args=""
           for a in ${ASSEMBLIES//,/ }; do args="$args --assembly $a"; done
+          if [ -z "$EXTRA" ] && [ -f .github/sample-request.txt ]; then EXTRA=$(grep -v '^#' .github/sample-request.txt | tr '\n' ' '); fi
           for u in $EXTRA; do args="$args --url $u"; done
           for n in 1144 1430 1217; do
             for p in bill-overview/bo bill-actions/ba bill-hearings/bh bill-testimony/bt bill-index/bi; do

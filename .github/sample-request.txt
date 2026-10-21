@@ -1,0 +1,3 @@
+# Extra official URLs to download in the "Collect source samples" workflow (one per line).
+https://ndlegis.gov/assembly/69-2025/regular/documents/25-0145-01000.pdf
+https://ndlegis.gov/assembly/69-2025/regular/bill-index.html

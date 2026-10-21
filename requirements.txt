@@ -1,0 +1,2 @@
+# Used by Streamlit Community Cloud. Installs the app package with Postgres + UI extras.
+.[postgres,app]

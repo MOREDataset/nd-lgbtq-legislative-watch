@@ -1,0 +1,134 @@
+# Relevance rules for finding legislation that may affect LGBTQ+ people.
+#
+# How it works (plain version):
+#   Each topic has terms. A term is a regular expression (case-insensitive).
+#   - weight: how strong a signal one match is (1 weak .. 5 very strong).
+#   - near:   optional. The match only counts if one of these patterns appears
+#             within `window` characters. Use it for words that are only
+#             meaningful in context ("restroom" near "sex").
+#   - unless: optional. Ignore the match if one of these appears nearby
+#             (e.g. "sex" in "sex offender").
+# Matches in the official title or summary count double.
+#
+# Bills scoring >= thresholds.relevant are listed automatically.
+# Bills between thresholds.review and thresholds.relevant go to the review queue.
+# Edit freely, then bump `version` so stored results are recomputed.
+
+version: "2026.10.1"
+
+thresholds:
+  relevant: 8
+  review: 3
+
+window: 160
+
+topics:
+  sogi:
+    label: Sexual orientation and gender identity
+    terms:
+      - {pattern: "sexual orientation", weight: 5}
+      - {pattern: "gender identity", weight: 5}
+      - {pattern: "gender expression", weight: 5}
+      - {pattern: "transgender", weight: 5}
+      - {pattern: "non-?binary", weight: 4}
+      - {pattern: "\\bLGBT", weight: 5}
+      - {pattern: "homosexual", weight: 5}
+      - {pattern: "same[- ]sex", weight: 4, unless: ["same[- ]sex (school|class|ward)"]}
+      - {pattern: "\\b(gay|lesbian|bisexual|queer|intersex)\\b", weight: 4}
+      - {pattern: "two-spirit", weight: 4}
+
+  sex_definitions:
+    label: Legal definitions of sex and gender
+    terms:
+      - {pattern: "biological sex", weight: 5}
+      - {pattern: "sex (assigned|observed|identified|determined) at birth", weight: 5}
+      - {pattern: "(immutable|reproductive) (biological )?(characteristics|anatomy|biology)", weight: 3, near: ["\\bsex\\b", "male", "female"]}
+      - {pattern: "\"(female|male|woman|man|girl|boy|sex|gender)\" means", weight: 4}
+      - {pattern: "pronoun", weight: 4}
+      - {pattern: "preferred (name|title)", weight: 3}
+      - {pattern: "gender transition", weight: 5}
+
+  healthcare:
+    label: Gender-affirming and related healthcare
+    terms:
+      - {pattern: "gender[- ]affirming", weight: 5}
+      - {pattern: "cross[- ]sex hormone", weight: 5}
+      - {pattern: "puberty[- ](blocking|blocker|suppress)", weight: 5}
+      - {pattern: "(sex|gender) reassignment", weight: 5}
+      - {pattern: "gender dysphoria", weight: 5}
+      - {pattern: "gender incongruence", weight: 5}
+      - {pattern: "detransition", weight: 5}
+      - {pattern: "sex[- ]trait modification", weight: 5}
+
+  conversion:
+    label: Conversion practices ("conversion therapy")
+    terms:
+      - {pattern: "conversion (therapy|practice|efforts)", weight: 5}
+      - {pattern: "reparative therapy", weight: 5}
+      - {pattern: "(sexual orientation|gender identity) change effort", weight: 5}
+
+  schools:
+    label: Schools, facilities, and athletics
+    terms:
+      - {pattern: "(restroom|bathroom|locker room|changing (room|facility)|shower room|multi(ple)?[- ]occupancy)", weight: 3, near: ["\\bsex\\b", "female", "male", "gender"]}
+      - {pattern: "(athletic|sports?) (team|event|competition)", weight: 3, near: ["\\bsex\\b", "female", "male", "gender", "women", "girls"]}
+      - {pattern: "(sleeping quarters|overnight accommodation|lodging)", weight: 2, near: ["\\bsex\\b", "female", "male"]}
+      - {pattern: "parental (rights|consent|notification)", weight: 2, near: ["gender", "pronoun", "name", "identity"]}
+
+  civil_rights:
+    label: Discrimination and civil rights
+    terms:
+      - {pattern: "human rights act", weight: 3}
+      - {pattern: "discriminatory practice", weight: 2}
+      - {pattern: "(protected class|status with respect to)", weight: 2}
+      - {pattern: "\\bdiscriminat", weight: 1, near: ["\\bsex\\b", "gender", "orientation", "religio"]}
+      - {pattern: "religious (freedom|liberty|exercise|belief)", weight: 1, near: ["marriage", "\\bsex", "gender", "discriminat"]}
+      - {pattern: "freedom of conscience", weight: 2}
+
+  marriage_family:
+    label: Marriage, families, and adoption
+    terms:
+      - {pattern: "one man and one woman", weight: 5}
+      - {pattern: "(child-placing agency|adoption|foster)", weight: 2, near: ["religious", "belief", "sex", "gender", "orientation", "conscience"]}
+      - {pattern: "\\bmarriage\\b", weight: 1, near: ["\\bsex\\b", "man", "woman", "spouse", "gender"]}
+      - {pattern: "\\b(husband|wife)\\b", weight: 1, near: ["spouse"]}
+
+  identity_documents:
+    label: Names, birth certificates, and ID
+    terms:
+      - {pattern: "birth (certificate|record)", weight: 3, near: ["\\bsex\\b", "gender", "amend"]}
+      - {pattern: "(driver'?s license|identification card|nondriver)", weight: 2, near: ["\\bsex\\b", "gender"]}
+      - {pattern: "(sex|gender) (marker|designation|identifier)", weight: 4}
+      - {pattern: "change of name|name change", weight: 1, near: ["\\bsex\\b", "gender"]}
+
+  education_library:
+    label: Libraries, curriculum, and public performances
+    terms:
+      - {pattern: "(library|libraries)", weight: 2, near: ["explicit sexual", "sexually explicit", "obscen", "harmful to minors", "objectionable"]}
+      - {pattern: "explicit sexual material", weight: 3}
+      - {pattern: "(drag|adult[- ]oriented) (performance|show|entertainment)", weight: 5}
+      - {pattern: "(performer|performance).{0,60}(gender|sex) (other than|different from)", weight: 4}
+      - {pattern: "(curriculum|instruction|classroom)", weight: 2, near: ["sexual orientation", "gender identity", "\\bgender\\b"]}
+
+  hiv_public_health:
+    label: HIV and public health
+    terms:
+      - {pattern: "\\bHIV\\b", weight: 5}
+      - {pattern: "human immunodeficiency virus", weight: 5}
+      - {pattern: "\\bAIDS\\b", weight: 4, unless: ["hearing aids?", "\\b(visual|teaching|mobility|first) aids\\b"]}
+      - {pattern: "pre-?exposure prophylaxis|\\bPrEP\\b", weight: 4}
+      - {pattern: "bodily fluid", weight: 3, near: ["infect", "transfer", "disease", "virus"]}
+      - {pattern: "sexually transmitted (disease|infection)", weight: 2}
+
+  employment_housing:
+    label: Employment and housing
+    terms:
+      - {pattern: "(employment|employer|housing|landlord|tenant|public accommodation)", weight: 1, near: ["sexual orientation", "gender identity", "\\bsex\\b"]}
+
+# Words that make a nearby "sex" match meaningless for this purpose.
+global_unless:
+  - "sex offender"
+  - "sexual offender"
+  - "sex trafficking"
+  - "sexual (assault|abuse|imposition|exploitation)"
+  - "\\bsex(ual)? crime"

@@ -1,0 +1,50 @@
+# Manually triggered. Downloads a small set of raw official files so parsers can
+# be checked against the real formats. Results are uploaded as a build artifact
+# (not committed), and reveal whether GitHub's runners can reach ndlegis.gov.
+name: Collect source samples
+
+on:
+  workflow_dispatch:
+    inputs:
+      assemblies:
+        description: "Comma-separated assemblies, e.g. 69-2025"
+        default: "69-2025"
+      extra_urls:
+        description: "Extra URLs (space-separated)"
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Download samples
+        env:
+          ASSEMBLIES: ${{ inputs.assemblies }}
+          EXTRA: ${{ inputs.extra_urls }}
+        run: |
+          args=""
+          for a in ${ASSEMBLIES//,/ }; do args="$args --assembly $a"; done
+          for u in $EXTRA; do args="$args --url $u"; done
+          for n in 1144 1430 1217; do
+            for p in bill-overview/bo bill-actions/ba bill-hearings/bh bill-testimony/bt bill-index/bi; do
+              args="$args --url https://ndlegis.gov/assembly/69-2025/regular/${p}${n}.html"
+            done
+          done
+          args="$args --url https://ndlegis.gov/legend/chamber_calendar/view/?chamber=H"
+          python -m ndwatch collect-samples samples $args || echo "some downloads failed (see manifest)"
+          echo "--- century code size (headers only)"
+          curl -sI -A "ND-LGBTQ-Legislative-Watch/0.1" https://ndlegis.gov/api/data/century_code.json | tee samples/century_code_headers.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-samples
+          path: samples/
+          retention-days: 7

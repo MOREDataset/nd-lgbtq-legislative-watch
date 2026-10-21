@@ -147,3 +147,7 @@ a.nw-tag:hover { background: var(--accent); }
 div[data-baseweb="select"] > div, .stTextInput input { background: var(--card) !important; }
 .stButton button, .stLinkButton a { border-radius: 4px; }
 header[data-testid="stHeader"] { background: var(--paper); }
+
+/* Bill titles can be long: keep the page headline readable on phones */
+.stApp h1 { font-size: clamp(1.65rem, 5.2vw, 2.5rem) !important; line-height: 1.15 !important; }
+.stApp h2 { font-size: clamp(1.4rem, 4.2vw, 1.9rem) !important; }

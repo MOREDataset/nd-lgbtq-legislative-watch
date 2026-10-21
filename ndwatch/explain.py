@@ -110,6 +110,14 @@ def what_would_change(title: str | None) -> list[str]:
     return result
 
 
+def headline(summary: str | None, fallback: str) -> str:
+    """The subject part of the official summary: 'Relating to X; to provide a penalty.' -> 'Relating to X.'"""
+    if not summary:
+        return fallback
+    first = summary.split(";")[0].strip().rstrip(".")
+    return first + "."
+
+
 def about_line(summary: str | None, title: str | None) -> str:
     """Turn 'Relating to X.' into 'This bill deals with X.'"""
     text = (summary or "").strip()
@@ -118,6 +126,7 @@ def about_line(summary: str | None, title: str | None) -> str:
         text = f"Relating to {m.group(1)}" if m else ""
     if not text:
         return "The official record does not include a short description."
+    text = text.split(";")[0]
     text = re.sub(r"^\s*relating to\s+", "", text, flags=re.I).rstrip(". ")
     return f"This bill deals with {text}."
 

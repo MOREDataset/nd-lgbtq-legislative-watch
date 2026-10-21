@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta
 from html import escape
 from urllib.parse import quote
 
-from ndwatch.explain import IMPACT_LABELS
+from ndwatch.explain import IMPACT_LABELS, headline
 from ndwatch.process import CURRENT, DONE, FAILED, SKIPPED
 from ndwatch.timeutil import fmt_date, fmt_relative, fmt_time, utc_to_local, utcnow
 
@@ -123,7 +123,7 @@ def bill_card(c: dict, followed: bool = False, new: bool = False) -> str:
     return (
         f'<div class="nw-card"><div class="top"><a class="nw-tag" href="{bill_href(c["uid"])}" target="_self">{e(c["name"])}</a>'
         f'{status_pills(c)}{star}{newp}</div>'
-        f'<div class="sum"><a href="{bill_href(c["uid"])}" target="_self" style="color:inherit;text-decoration:none">{e(c.get("summary") or c.get("title") or c["name"])}</a></div>'
+        f'<div class="sum"><a href="{bill_href(c["uid"])}" target="_self" style="color:inherit;text-decoration:none">{e(headline(c.get("summary"), c.get("title") or c["name"]))}</a></div>'
         f'<div class="meta">{" &middot; ".join(meta)}</div><div>{topics}</div>{nxt}</div>'
     )
 

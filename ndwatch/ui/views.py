@@ -13,6 +13,7 @@ from ndwatch.explain import (
     about_line,
     century_code_links,
     explain_status,
+    headline,
     kind_name,
     what_would_change,
 )
@@ -218,7 +219,7 @@ def bill_page(uid: str) -> None:
         f'<span class="nw-tag" style="font-size:1rem">{C.e(d["name"])}</span>{"".join(pills)}'
         f'<span style="color:var(--muted);font-size:.85rem">{C.e(kind_name(d["kind"]))} &middot; {C.e(d["session_name"])}</span></div>'
     )
-    st.markdown(f"# {d['summary'] or d['name']}")
+    st.markdown(f"# {headline(d['summary'], d['name'])}")
     follow_button(uid, d["name"])
 
     # --- the five answers

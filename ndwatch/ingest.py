@@ -342,6 +342,11 @@ def _sync_actions(db: DbSession, bill: Bill, api: ApiBill, writer: EventWriter, 
 
 def _sync_versions(db: DbSession, bill: Bill, api: ApiBill, writer: EventWriter, now: datetime) -> None:
     existing = {v.lc_number: v for v in bill.versions}
+    # Versions have no date of their own; use the first official action that names the version.
+    version_dates: dict[str, datetime] = {}
+    for a in api.actions:
+        if a.bill_version and a.date and a.bill_version not in version_dates:
+            version_dates[a.bill_version] = a.date
     for pos, v in enumerate(api.versions):
         row = existing.get(v.lc_number)
         if row is None:
@@ -357,7 +362,8 @@ def _sync_versions(db: DbSession, bill: Bill, api: ApiBill, writer: EventWriter,
                         bill_uid=bill.uid,
                         title=f"A new version of {bill.name} was published ({_version_label(desc)}).",
                         detail=f"Official version description: “{desc}” (LC {v.lc_number}).",
-                        event_date=None,
+                        event_date=local_to_utc(version_dates.get(v.lc_number)),
+                        event_date_only=True,
                         source_url=v.document_url or bill.versions_url,
                         source_label="Bill text (ndlegis.gov)",
                     )
@@ -411,13 +417,14 @@ def _sync_hearings(db: DbSession, bill: Bill, api: ApiBill, writer: EventWriter,
             )
             bill.hearings.append(row)
             upcoming = starts is not None and starts > now
+            verb = "is scheduled for" if (upcoming or starts is None) else "had"
             writer.emit(
                 EventSpec(
                     dedupe_key=f"{bill.uid}:hearing:{h.id}:new",
                     kind="hearing_scheduled" if public else "work_session_scheduled",
                     importance=HIGH if (public and upcoming) else (MEDIUM if public else LOW),
                     bill_uid=bill.uid,
-                    title=f"{bill.name} is scheduled for {what}: {fmt_date(starts)}"
+                    title=f"{bill.name} {verb} {what}: {fmt_date(starts)}"
                     + (f", {committee}" if committee else "")
                     + (f", room {h.room}" if h.room else "")
                     + ".",

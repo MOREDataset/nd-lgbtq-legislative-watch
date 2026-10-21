@@ -82,10 +82,13 @@ def fmt_relative(dt_utc: datetime | None, now: datetime | None = None) -> str:
         s = "just now" if not future else "in a minute"
         return s
     mins = secs / 60
+    def unit(n: int, word: str) -> str:
+        return f"{n} {word}{'' if n == 1 else 's'}"
+
     if mins < 90:
-        v = f"{int(mins)} minutes"
+        v = unit(int(mins), "minute")
     elif mins < 60 * 36:
-        v = f"{int(mins // 60)} hours"
+        v = unit(int(mins // 60), "hour")
     else:
-        v = f"{int(mins // 1440)} days"
+        v = unit(int(mins // 1440), "day")
     return f"in {v}" if future else f"{v} ago"

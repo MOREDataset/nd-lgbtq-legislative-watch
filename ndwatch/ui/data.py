@@ -131,6 +131,9 @@ def feed(db: DbSession, uids: set[str] | None = None, limit: int = 200, min_impo
     rows = db.execute(q).all()
     items = []
     for e, name, summary in rows:
+        # "Flagged by our matcher" is not legislative news for a bill that has already finished.
+        if e.kind == "flagged_relevant" and e.backfill:
+            continue
         items.append({
             "id": e.id, "uid": e.bill_uid, "bill": name, "bill_summary": summary, "kind": e.kind,
             "importance": e.importance, "title": e.title, "detail": e.detail, "event_date": e.event_date,

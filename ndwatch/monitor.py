@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session as DbSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import selectinload, sessionmaker
 
 from ndwatch.config import Settings
 from ndwatch.db.schema import (
@@ -306,6 +306,14 @@ def _ingest_assembly(factory, api: LegislativeApi, settings: Settings, report: C
         else:
             first_load = not db.scalar(select(func.count()).select_from(Bill).where(Bill.assembly_id == year))
             writer = EventWriter(db, run_id, backfill=first_load)
+            writer.preload()
+            # Load this assembly's bills with their child rows in a few queries.
+            db.scalars(
+                select(Bill).where(Bill.assembly_id == year).options(
+                    selectinload(Bill.sponsors), selectinload(Bill.actions),
+                    selectinload(Bill.versions), selectinload(Bill.hearings),
+                )
+            ).all()
             new = changed = 0
             sessions = {s.id: s.name for s in db.scalars(select(Session).where(Session.assembly_id == year))}
             for i, b in enumerate(bills):
@@ -436,7 +444,7 @@ def _update_relevance(factory, report: CycleReport) -> None:
     rules = default_rules()
     with factory() as db:
         writer = EventWriter(db, report.run_id)
-        bills = db.scalars(select(Bill)).all()
+        bills = db.scalars(select(Bill).options(selectinload(Bill.versions))).all()
         existing = {r.bill_uid: r for r in db.scalars(select(Relevance))}
         updated = newly = 0
         for bill in bills:

@@ -81,6 +81,7 @@ _HEADER_MAP = {
     "organization": "organization",
     "role": "role",
     "city | state": "city_state",
+    "city state": "city_state",
     "city|state": "city_state",
     "city": "city_state",
     "position": "position",
@@ -98,6 +99,34 @@ def _clean(s: str | None) -> str | None:
     return s or None
 
 
+def _direct_rows(table):
+    """Rows of this table only (not of tables nested inside it)."""
+    rows = []
+    for child in table.find_all(["tbody", "thead", "tr"], recursive=False):
+        if child.name == "tr":
+            rows.append(child)
+        else:
+            rows.extend(child.find_all("tr", recursive=False))
+    return rows
+
+
+def _flat_cells(tr):
+    """Cells of a row. The site sometimes packs duplicate submissions into a nested
+    table spanning several columns; we read its first row and skip hidden filler cells."""
+    cells = []
+    for td in tr.find_all("td", recursive=False):
+        if "display: none" in (td.get("style") or "").replace("display:none", "display: none"):
+            continue
+        nested = td.find("table")
+        if nested is not None:
+            first = nested.find("tr")
+            if first is not None:
+                cells.extend(first.find_all("td", recursive=False))
+            continue
+        cells.append(td)
+    return cells
+
+
 def parse_testimony_page(html: str, page_url: str) -> tuple[list[TestimonyRow], list[str]]:
     """Returns (rows, warnings). Rows without a document link are skipped with a warning."""
     soup = BeautifulSoup(html, "lxml")
@@ -108,8 +137,8 @@ def parse_testimony_page(html: str, page_url: str) -> tuple[list[TestimonyRow], 
         cols = [_HEADER_MAP.get(h.lower()) for h in headers]
         if "position" not in cols or "document_number" not in cols:
             continue
-        for tr in table.find_all("tr"):
-            tds = tr.find_all("td")
+        for tr in _direct_rows(table):
+            tds = _flat_cells(tr)
             if not tds:
                 continue
             values: dict[str, str | None] = {}

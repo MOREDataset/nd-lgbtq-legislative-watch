@@ -77,11 +77,19 @@ class EventWriter:
         self.run_id = run_id
         self.backfill = backfill
         self._seen: set[str] = set()
+        self._preloaded = False
         self.written = 0
+
+    def preload(self) -> None:
+        """Load all existing event keys at once (one query instead of one per event)."""
+        self._seen.update(self.db.scalars(select(Event.dedupe_key)))
+        self._preloaded = True
 
     def exists(self, key: str) -> bool:
         if key in self._seen:
             return True
+        if self._preloaded:
+            return False
         hit = self.db.execute(select(Event.id).where(Event.dedupe_key == key)).first()
         if hit:
             self._seen.add(key)
@@ -365,6 +373,10 @@ def _sync_versions(db: DbSession, bill: Bill, api: ApiBill, writer: EventWriter,
 
 def _version_label(desc: str) -> str:
     d = desc.lower()
+    if d.startswith("prepared by"):
+        return "a proposed amendment, not necessarily adopted"
+    if d.startswith("adopted by"):
+        return "an amendment adopted by a committee"
     if "engross" in d:
         return "updated text including adopted amendments"
     if "amend" in d:
@@ -489,13 +501,12 @@ def upsert_roll_calls(db: DbSession, roll_calls: list[ApiRollCall]) -> int:
     """Store full roll calls with individual votes. Returns how many were new or completed."""
     now = utcnow()
     n = 0
+    complete = set(db.scalars(select(MemberVote.roll_call_id).distinct()))
+    existing = {r.id: r for r in db.scalars(select(RollCall))}
     for rc in roll_calls:
-        row = db.get(RollCall, rc.id)
-        has_votes = row is not None and db.execute(
-            select(MemberVote.id).where(MemberVote.roll_call_id == rc.id).limit(1)
-        ).first() is not None
-        if row is not None and has_votes:
+        if rc.id in complete:
             continue
+        row = existing.get(rc.id)
         uid = bill_uid(rc.session_id, rc.bill) if (rc.session_id and rc.bill) else None
         if row is None:
             row = RollCall(id=rc.id, first_seen_at=now)

@@ -95,7 +95,7 @@ def what_would_change(title: str | None) -> list[str]:
     for pattern, _key, template in _ACT_PARTS:
         for m in re.finditer(pattern, t, re.I):
             if "{}" in template:
-                target = m.group(1).strip().rstrip(",")
+                target = re.split(r",\s*(?:relating to|to |and to )", m.group(1), maxsplit=1)[0].strip().rstrip(",")
                 target = re.sub(r",? of the North Dakota Century Code", " of the North Dakota Century Code", target)
                 out.append(template.format(target))
             else:

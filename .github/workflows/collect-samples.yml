@@ -50,13 +50,16 @@ jobs:
           curl -sI -A "ND-LGBTQ-Legislative-Watch/0.1" https://ndlegis.gov/api/data/century_code.json | tee samples/century_code_headers.txt
       - name: Save samples to the source-samples branch (compressed, kept out of main)
         run: |
-          gzip -9 -k samples/*.json samples/*html* samples/*pdf* 2>/dev/null || true
-          mkdir -p /tmp/out && cp samples/*.gz samples/manifest.json samples/century_code_headers.txt /tmp/out/ 2>/dev/null || true
+          mkdir -p /tmp/out
+          for f in samples/*; do
+            case "$f" in *manifest.json|*headers.txt) cp "$f" /tmp/out/ ;; *) gzip -9 -c "$f" > "/tmp/out/$(basename "$f").gz" ;; esac
+          done
           ls -la /tmp/out
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --orphan source-samples
           git rm -rqf .
+          git clean -fdxq
           cp /tmp/out/* .
           find . -maxdepth 1 -type f -size +95M -print -delete
           git add -A

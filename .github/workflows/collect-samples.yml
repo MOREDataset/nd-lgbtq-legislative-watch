@@ -45,11 +45,12 @@ jobs:
             done
           done
           args="$args --url https://ndlegis.gov/legend/chamber_calendar/view/?chamber=H"
-          python -m ndwatch collect-samples samples $args || echo "some downloads failed (see manifest)"
+          python -m ndwatch collect-samples samples $args || echo "::warning::some downloads failed (see manifest)"
           echo "--- century code size (headers only)"
           curl -sI -A "ND-LGBTQ-Legislative-Watch/0.1" https://ndlegis.gov/api/data/century_code.json | tee samples/century_code_headers.txt
       - name: Save samples to the source-samples branch (compressed, kept out of main)
         run: |
+          trap 'echo "::error::save step failed at: $BASH_COMMAND"' ERR
           mkdir -p /tmp/out
           for f in samples/*; do
             case "$f" in *manifest.json|*headers.txt) cp "$f" /tmp/out/ ;; *) gzip -9 -c "$f" > "/tmp/out/$(basename "$f").gz" ;; esac

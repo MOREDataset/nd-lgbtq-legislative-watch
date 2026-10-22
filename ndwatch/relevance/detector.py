@@ -59,6 +59,7 @@ class Evidence:
     weight: int
     version: str | None = None
     url: str | None = None
+    rule: str = ""  # the rule pattern that matched (for de-duplication; not stored)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -170,6 +171,7 @@ def _scan(text: str, where: str, rules: Rules, version: str | None, url: str | N
                         weight=term.weight,
                         version=version,
                         url=url,
+                        rule=term.raw,
                     )
                 )
             if hits >= 3:
@@ -208,21 +210,29 @@ def classify(
     rules = rules or default_rules()
     evidence: list[Evidence] = []
 
-    for where, text in (("title", title or ""), ("summary", summary or "")):
+    # The official title usually repeats the summary, so a rule found in both
+    # counts once (the stronger of the two).
+    head: dict[tuple[str, str], Evidence] = {}
+    for where, text in (("summary", summary or ""), ("title", title or "")):
         for ev in _scan(text, where, rules, None, None):
             ev.weight *= 2
-            evidence.append(ev)
+            key = (ev.topic, ev.rule or ev.term.lower())
+            if key not in head or ev.weight > head[key].weight:
+                head[key] = ev
+    evidence.extend(head.values())
 
     # Full text: count each term once across versions (keep the newest version's quote).
     text_ev: dict[tuple[str, str], Evidence] = {}
     for lc, raw, url in reversed(texts or []):
         norm = normalize_text(raw)
         for ev in _scan(norm, "text", rules, lc, url):
-            key = (ev.topic, ev.term.lower())
+            # Key on the rule, not the matched words: "female" and "male" from the
+            # same rule must count once.
+            key = (ev.topic, ev.rule or ev.term.lower())
             if key not in text_ev or ev.weight > text_ev[key].weight:
                 text_ev[key] = ev
     # Skip text hits already proven by the title/summary to avoid double counting.
-    title_terms = {(e.topic, e.term.lower()) for e in evidence}
+    title_terms = {(e.topic, e.rule or e.term.lower()) for e in evidence}
     evidence.extend(e for k, e in text_ev.items() if k not in title_terms)
 
     if century_code_hits:

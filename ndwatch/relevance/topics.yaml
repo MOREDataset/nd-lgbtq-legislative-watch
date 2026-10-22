@@ -14,7 +14,7 @@
 # Bills between thresholds.review and thresholds.relevant go to the review queue.
 # Edit freely, then bump `version` so stored results are recomputed.
 
-version: "2026.10.1"
+version: "2026.10.2"
 
 thresholds:
   relevant: 8
@@ -44,7 +44,7 @@ topics:
       - {pattern: "sex (assigned|observed|identified|determined) at birth", weight: 5}
       - {pattern: "(immutable|reproductive) (biological )?(characteristics|anatomy|biology)", weight: 3, near: ["\\bsex\\b", "male", "female"]}
       - {pattern: "\"(female|male|woman|man|girl|boy|sex|gender)\" means", weight: 4}
-      - {pattern: "pronoun", weight: 4}
+      - {pattern: "\\bpronouns?\\b", weight: 4}
       - {pattern: "preferred (name|title)", weight: 3}
       - {pattern: "gender transition", weight: 5}
 
@@ -73,14 +73,15 @@ topics:
       - {pattern: "(restroom|bathroom|locker room|changing (room|facility)|shower room|multi(ple)?[- ]occupancy)", weight: 3, near: ["\\bsex\\b", "female", "male", "gender"]}
       - {pattern: "(athletic|sports?) (team|event|competition)", weight: 3, near: ["\\bsex\\b", "female", "male", "gender", "women", "girls"]}
       - {pattern: "(sleeping quarters|overnight accommodation|lodging)", weight: 2, near: ["\\bsex\\b", "female", "male"]}
-      - {pattern: "parental (rights|consent|notification)", weight: 2, near: ["gender", "pronoun", "name", "identity"]}
+      - {pattern: "parental (rights|consent|notification)", weight: 2, near: ["gender", "pronoun", "name", "identity"], unless: ["terminat\\w* (of )?parental rights", "parental rights (were|have been|are) terminated"]}
 
   civil_rights:
     label: Discrimination and civil rights
     terms:
       - {pattern: "human rights act", weight: 3}
-      - {pattern: "discriminatory practice", weight: 2}
-      - {pattern: "(protected class|status with respect to)", weight: 2}
+      - {pattern: "discriminatory practice", weight: 2, near: ["\\bsex\\b", "gender", "orientation", "pronoun"]}
+      - {pattern: "protected class", weight: 2}
+      - {pattern: "(race or sex|sex or race) (scapegoating|stereotyping)|divisive concepts?|specified concepts", weight: 2}
       - {pattern: "\\bdiscriminat", weight: 1, near: ["\\bsex\\b", "gender", "orientation", "religio"]}
       - {pattern: "religious (freedom|liberty|exercise|belief)", weight: 1, near: ["marriage", "\\bsex", "gender", "discriminat"]}
       - {pattern: "freedom of conscience", weight: 2}
@@ -113,12 +114,22 @@ topics:
   hiv_public_health:
     label: HIV and public health
     terms:
-      - {pattern: "\\bHIV\\b", weight: 5}
-      - {pattern: "human immunodeficiency virus", weight: 5}
-      - {pattern: "\\bAIDS\\b", weight: 4, unless: ["hearing aids?", "\\b(visual|teaching|mobility|first) aids\\b"]}
+      - {pattern: "\\bHIV\\b", weight: 5, unless: ["debilitating medical condition", "antiretroviral"]}
+      - {pattern: "human immunodeficiency virus", weight: 5, unless: ["debilitating medical condition", "antiretroviral"]}
+      # Upper-case only: "aids" (hearing aids, aids and abets) is not AIDS.
+      - {pattern: "(?-i:\\bAIDS\\b)", weight: 4, unless: ["debilitating medical condition"]}
       - {pattern: "pre-?exposure prophylaxis|\\bPrEP\\b", weight: 4}
       - {pattern: "bodily fluid", weight: 3, near: ["infect", "transfer", "disease", "virus"]}
       - {pattern: "sexually transmitted (disease|infection)", weight: 2}
+
+  parents_and_sex_education:
+    label: Parental rights and sex education
+    # Weak signals on purpose: these bills go to the review queue for a person to judge.
+    terms:
+      - {pattern: "human sexuality|sex(uality)? education|sexual (risk avoidance|health education)", weight: 2}
+      - {pattern: "fundamental (parental rights|right of a parent)|parent's (interest|right) in", weight: 2, near: ["school", "instruction", "curriculum", "health care", "name", "pronoun", "medical"]}
+      - {pattern: "objectionable (materials?|performance)", weight: 3}
+      - {pattern: "harmful to minors", weight: 2}
 
   employment_housing:
     label: Employment and housing
@@ -127,6 +138,11 @@ topics:
 
 # Words that make a nearby "sex" match meaningless for this purpose.
 global_unless:
+  # The standard protected-class list in North Dakota law (no orientation or
+  # identity in it) appears in many unrelated bills.
+  - "(race, color, )?religion, sex, national origin"
+  - "based on sex, it includes sexual harassment"
+  - "status with (respect|regard) to marriage"
   - "sex offender"
   - "sexual offender"
   - "sex trafficking"

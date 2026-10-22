@@ -73,7 +73,7 @@ topics:
       - {pattern: "(restroom|bathroom|locker room|changing (room|facility)|shower room|multi(ple)?[- ]occupancy)", weight: 3, near: ["\\bsex\\b", "female", "male", "gender"]}
       - {pattern: "(athletic|sports?) (team|event|competition)", weight: 3, near: ["\\bsex\\b", "female", "male", "gender", "women", "girls"]}
       - {pattern: "(sleeping quarters|overnight accommodation|lodging)", weight: 2, near: ["\\bsex\\b", "female", "male"]}
-      - {pattern: "parental (rights|consent|notification)", weight: 2, near: ["gender", "pronoun", "name", "identity"]}
+      - {pattern: "parental (rights|consent|notification)", weight: 2, near: ["gender", "pronoun", "name", "identity"], unless: ["terminat\\w* (of )?parental rights", "parental rights (were|have been|are) terminated"]}
 
   civil_rights:
     label: Discrimination and civil rights
@@ -127,7 +127,7 @@ topics:
     # Weak signals on purpose: these bills go to the review queue for a person to judge.
     terms:
       - {pattern: "human sexuality|sex(uality)? education|sexual (risk avoidance|health education)", weight: 2}
-      - {pattern: "(fundamental )?(parental rights|right of a parent|parent's (interest|right))", weight: 2, near: ["school", "instruction", "curriculum", "health care", "name", "pronoun", "medical"]}
+      - {pattern: "fundamental (parental rights|right of a parent)|parent's (interest|right) in", weight: 2, near: ["school", "instruction", "curriculum", "health care", "name", "pronoun", "medical"]}
       - {pattern: "objectionable (materials?|performance)", weight: 3}
       - {pattern: "harmful to minors", weight: 2}
 

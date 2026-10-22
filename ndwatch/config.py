@@ -61,7 +61,7 @@ class Settings:
     request_timeout: float = 60.0
     max_retries: int = 3
     # How many bill-text PDFs to download per run (backfill happens over several runs).
-    max_pdfs_per_run: int = 400
+    max_pdfs_per_run: int = 1000
     # How many testimony pages to check per run.
     max_testimony_pages_per_run: int = 60
     # How many assemblies back to ingest (1 = only the newest).

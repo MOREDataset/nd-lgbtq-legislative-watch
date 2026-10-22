@@ -52,8 +52,8 @@ Optional *Variables* (same page, *Variables* tab):
 
 Then run it once by hand: *Actions* → *Monitor official sources* → *Run workflow*.
 The first run loads the whole assembly (about 2–5 minutes). Bill text is
-downloaded gradually, 400 documents per run, so full-text detection is complete
-after about 10 hourly runs (the monitor keeps an hourly pace until this backlog is done).
+downloaded gradually, 1000 documents per run (about 25 minutes at a polite pace), so full-text detection is complete
+after about 4 runs (the monitor keeps an hourly pace until this backlog is done).
 
 ### 3. Deploy the dashboard
 share.streamlit.io → *Create app* → *Deploy a public app from GitHub* → repo

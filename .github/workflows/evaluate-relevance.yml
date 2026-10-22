@@ -65,11 +65,16 @@ jobs:
           ls -la /tmp/out
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan "relevance-eval-$ASSEMBLY"
-          git rm -rqf .
+          # Add a new commit on top of the branch (force-pushing is blocked by the repo's rules).
+          if git fetch -q origin "relevance-eval-$ASSEMBLY" 2>/dev/null; then
+            git checkout -q -B "relevance-eval-$ASSEMBLY" FETCH_HEAD
+          else
+            git checkout -q --orphan "relevance-eval-$ASSEMBLY"
+          fi
+          git rm -rqf . || true
           git clean -fdxq
           cp /tmp/out/* .
           find . -maxdepth 1 -type f -size +95M -print -delete
           git add -A
           git commit -qm "Relevance evaluation $ASSEMBLY $(date -u +%Y-%m-%dT%H:%MZ)"
-          git push -f origin "relevance-eval-$ASSEMBLY"
+          git push origin "relevance-eval-$ASSEMBLY"

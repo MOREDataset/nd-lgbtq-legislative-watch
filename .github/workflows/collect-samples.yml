@@ -58,14 +58,19 @@ jobs:
           ls -la /tmp/out
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan source-samples
-          git rm -rqf .
+          # Add a new commit on top of the branch (force-pushing is blocked by the repo's rules).
+          if git fetch -q origin source-samples 2>/dev/null; then
+            git checkout -q -B source-samples FETCH_HEAD
+          else
+            git checkout -q --orphan source-samples
+          fi
+          git rm -rqf . || true
           git clean -fdxq
           cp /tmp/out/* .
           find . -maxdepth 1 -type f -size +95M -print -delete
           git add -A
           git commit -qm "Source samples $(date -u +%Y-%m-%dT%H:%MZ)"
-          if ! git push -f origin source-samples 2> push-err.txt; then
+          if ! git push origin source-samples 2> push-err.txt; then
             echo "::error::push failed: $(tr '\n' ' ' < push-err.txt | head -c 1500)"
             exit 1
           fi

@@ -83,6 +83,29 @@ The worker is one command: `python -m ndwatch monitor`. Any scheduler that can
 run Python with `DATABASE_URL` set works (Render cron job, Fly.io machine,
 a cloud function, a small VPS with cron). Nothing in the dashboard changes.
 
+## If the hourly schedule never starts
+
+GitHub sometimes delays or skips scheduled workflows, especially on new repos.
+If **Actions → Monitor official sources** shows no runs labelled "schedule"
+after a few hours, trigger it from a free outside scheduler instead:
+
+1. GitHub → Settings → Developer settings → Fine-grained personal access tokens
+   → **Generate new token**. Repository access: *only* this repository.
+   Permissions: **Actions: Read and write** (nothing else). Pick an expiry and
+   set a reminder to renew it.
+2. Create a free account at <https://cron-job.org> → **Create cronjob**:
+   - URL: `https://api.github.com/repos/MOREDataset/nd-lgbtq-legislative-watch/actions/workflows/monitor.yml/dispatches`
+   - Schedule: every hour at minute 23
+   - Advanced → Request method **POST**; headers
+     `Authorization: Bearer <your token>`, `Accept: application/vnd.github+json`;
+     body `{"ref":"main","inputs":{"force":"false"}}`
+3. Save and use **Test run**: a new run should appear in the Actions tab.
+
+The token lives only in cron-job.org, never in the repo. `force: false` lets the
+program skip runs that are not due, so off-season runs end in seconds. You can
+keep the GitHub schedule as well; the workflow's concurrency setting stops two
+runs from overlapping.
+
 ## Polling policy
 The workflow wakes hourly; the program decides whether a full check is due:
 

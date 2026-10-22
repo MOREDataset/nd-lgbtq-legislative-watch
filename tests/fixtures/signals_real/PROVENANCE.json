@@ -1,0 +1,85 @@
+{
+  "note": "Real pages from official sources (and two advocacy trackers), unmodified, gzipped.",
+  "files": {
+    "https://ndlegis.gov/assembly/69-2025/committees/interim": {
+      "file": "ndlegis.gov%2Fassembly%2F69-2025%2Fcommittees%2Finterim.gz",
+      "fetched_at": "2026-10-22T21:58:44.369399+00:00",
+      "sha256": "60423a7f03413cdf26db39f5725dfe47ede7cc6bd1ff47fa89259cb4e2407dc5"
+    },
+    "https://ndlegis.gov/assembly/69-2025/committees/interim/human-services-committee": {
+      "file": "ndlegis.gov%2Fassembly%2F69-2025%2Fcommittees%2Finterim%2Fhuman-services-committee.gz",
+      "fetched_at": "2026-10-22T21:58:45.981574+00:00",
+      "sha256": "9c396977413dd72eecfa1c227c2ac61780b7e04bb1ca5b28dc68d203e8f6ca67"
+    },
+    "https://ndlegis.gov/assembly/69-2025/committees/interim/administrative-rules-committee": {
+      "file": "ndlegis.gov%2Fassembly%2F69-2025%2Fcommittees%2Finterim%2Fadministrative-rules-committee.gz",
+      "fetched_at": "2026-10-22T21:58:47.545581+00:00",
+      "sha256": "f47d852d7741ceabc706c96ffb36cfa71258793fe90053ddcd75da1319e45279"
+    },
+    "https://ndlegis.gov/events/agency-hearings": {
+      "file": "ndlegis.gov%2Fevents%2Fagency-hearings.gz",
+      "fetched_at": "2026-10-22T22:01:39.349941+00:00",
+      "sha256": "951f3ed4c88d6f86edd656bdc3ec8da135429303c086d74ba423047b300a0a7d"
+    },
+    "https://ndlegis.gov/assembly/69-2025/committees/interim/health-care-committee": {
+      "file": "ndlegis.gov%2Fassembly%2F69-2025%2Fcommittees%2Finterim%2Fhealth-care-committee.gz",
+      "fetched_at": "2026-10-22T22:01:45.434787+00:00",
+      "sha256": "6b4c319ff9d9e06df57b8c89c7aed4cd7fbf39bb16315986e69401d11b0ddc10"
+    },
+    "https://ndlegis.gov/assembly/69-2025/committees/interim/judiciary-committee": {
+      "file": "ndlegis.gov%2Fassembly%2F69-2025%2Fcommittees%2Finterim%2Fjudiciary-committee.gz",
+      "fetched_at": "2026-10-22T22:01:46.937819+00:00",
+      "sha256": "ce7cfc201cc821c0c31042fea6bfbf6192750a6120bff46a821d544608be0bdf"
+    },
+    "https://ndlegis.gov/assembly/69-2025/committees/interim/education-committee": {
+      "file": "ndlegis.gov%2Fassembly%2F69-2025%2Fcommittees%2Finterim%2Feducation-committee.gz",
+      "fetched_at": "2026-10-22T22:01:48.434681+00:00",
+      "sha256": "5f9380047fb2c5b3826cd9949393a9c2bdb8d5790c738b87a1bac647aaebdd46"
+    },
+    "https://ndlegis.gov/sites/default/files/pdf/committees/69-2025/27.0221.01000.pdf": {
+      "file": "ndlegis.gov%2Fsites%2Fdefault%2Ffiles%2Fpdf%2Fcommittees%2F69-2025%2F27.0221.01000.pdf.gz",
+      "fetched_at": "2026-10-22T22:01:49.910365+00:00",
+      "sha256": "d31a17b24d9189aa6f8fd9cefdbd0cabe92a7c3bb243b83c4fefa52918a25a3a"
+    },
+    "https://www.sos.nd.gov/elections/voter/ballot-measures/measures-ballot": {
+      "file": "www.sos.nd.gov%2Felections%2Fvoter%2Fballot-measures%2Fmeasures-ballot.gz",
+      "fetched_at": "2026-10-22T22:01:53.478614+00:00",
+      "sha256": "6500f02e7bbd3970fcd0e02a057be6205d1459d298404db824ae479b4365b55c"
+    },
+    "https://www.aclu.org/legislative-attacks-on-lgbtq-rights-2025?state=ND": {
+      "file": "www.aclu.org%2Flegislative-attacks-on-lgbtq-rights-2025%3Fstate%3DND.gz",
+      "fetched_at": "2026-10-22T22:02:03.150161+00:00",
+      "sha256": "db4fca684eae9fa064bfe7fab8f04b38275b9a64adbfbd88571f7acf55ff4dd0"
+    },
+    "https://translegislation.com/bills/2025/ND": {
+      "file": "translegislation.com%2Fbills%2F2025%2FND.gz",
+      "fetched_at": "2026-10-22T22:02:03.274767+00:00",
+      "sha256": "e4d1b6a0194a71fe8653a4580ae6414483410c4a93e39cc60304a71478af2793"
+    },
+    "https://ndlegis.gov/events/2026/10/13/department-environmental-quality": {
+      "file": "ndlegis.gov%2Fevents%2F2026%2F10%2F13%2Fdepartment-environmental-quality.gz",
+      "fetched_at": "2026-10-22T22:08:43.609315+00:00",
+      "sha256": "326ab392313eaa5b645646c56bda76f537cb231c7d4e77f2ceb73a5a243df582"
+    },
+    "https://ndlegis.gov/events/2026/09/09/department-public-instruction": {
+      "file": "ndlegis.gov%2Fevents%2F2026%2F09%2F09%2Fdepartment-public-instruction.gz",
+      "fetched_at": "2026-10-22T22:08:45.137984+00:00",
+      "sha256": "d4b6dae9eaac0546dea0fc83016404f9178e127f05c895e31d80ca4661b547d4"
+    },
+    "https://ndlegis.gov/events/2026/09/18/dhhs-foster-homes-adults": {
+      "file": "ndlegis.gov%2Fevents%2F2026%2F09%2F18%2Fdhhs-foster-homes-adults.gz",
+      "fetched_at": "2026-10-22T22:08:49.645486+00:00",
+      "sha256": "c823aba63868c8a82f284dcaa504bc7b919b708b5b9ab1c2833ec3d094afe82d"
+    },
+    "https://www.sos.nd.gov/elections/voter/ballot-measures/petitions-circulation": {
+      "file": "www.sos.nd.gov%2Felections%2Fvoter%2Fballot-measures%2Fpetitions-circulation.gz",
+      "fetched_at": "2026-10-22T22:08:51.957645+00:00",
+      "sha256": "ddc54d9b397e55f5219fd9115a8a17e03ea1c4bb30c582a3d12784852942b82a"
+    },
+    "https://translegislation.com/bills/2023/ND": {
+      "file": "translegislation.com%2Fbills%2F2023%2FND.gz",
+      "fetched_at": "2026-10-22T22:08:54.294723+00:00",
+      "sha256": "a9da6000df507b1f5f1ff42b800bac63dfd6cc57a5e2a167e621413afc280efe"
+    }
+  }
+}

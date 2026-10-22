@@ -17,4 +17,5 @@ def factory(tmp_path):
 
 @pytest.fixture
 def settings():
-    return dataclasses.replace(Settings(), request_interval=0, max_retries=0, assemblies_to_track=1)
+    return dataclasses.replace(Settings(), request_interval=0, max_retries=0, assemblies_to_track=1,
+                               signals_enabled=False)

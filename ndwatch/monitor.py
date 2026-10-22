@@ -43,6 +43,7 @@ from ndwatch.ingest import (
     upsert_session,
 )
 from ndwatch.relevance.detector import RELEVANT, classify, default_rules
+from ndwatch.signals import collect_signals
 from ndwatch.sources.api import LegislativeApi
 from ndwatch.sources.http import Fetcher, FetchResult
 from ndwatch.sources.pages import (
@@ -259,6 +260,14 @@ def _cycle_body(factory, api: LegislativeApi, fetcher: Fetcher, settings: Settin
     log.info("step done: %s | %s", '_update_relevance', report.notes[-1] if report.notes else "")
     _collect_testimony(factory, fetcher, settings, report)
     log.info("step done: %s | %s", '_collect_testimony', report.notes[-1] if report.notes else "")
+
+    # Early signals from other official sources (interim committees, agency rules,
+    # ballot measures) and the tracker cross-check. Newest two assemblies: during a
+    # session the previous assembly's interim work (bill drafts) is still relevant.
+    with factory() as db:
+        newest = list(db.scalars(select(Assembly.id).order_by(Assembly.number.desc()).limit(2)))
+    collect_signals(factory, fetcher, settings, report, newest)
+    log.info("step done: %s | %s", 'collect_signals', report.notes[-1] if report.notes else "")
 
 
 def _ingest_assembly(factory, api: LegislativeApi, settings: Settings, report: CycleReport, year: str) -> None:

@@ -382,4 +382,37 @@ class NotificationOutbox(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime)
 
 
+class Signal(Base):
+    """An item from an official source other than a bill: an interim study, a bill
+    draft, a committee memo or agenda, an agency rule hearing, or a ballot measure.
+    Also stores bill numbers named by advocacy trackers (kind "tracker"), which are
+    only used to suggest bills for review, never shown as facts."""
+
+    __tablename__ = "signals"
+    id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(30), index=True)
+    # interim_study | bill_draft | committee_memo | committee_meeting | agency_rule | ballot_measure | tracker
+    body: Mapped[str | None] = mapped_column(String(200))  # committee, agency, Secretary of State, tracker name
+    assembly_id: Mapped[str | None] = mapped_column(String(16))
+    title: Mapped[str] = mapped_column(Text)
+    detail: Mapped[str | None] = mapped_column(Text)
+    url: Mapped[str | None] = mapped_column(String(400))  # the item itself (document)
+    page_url: Mapped[str | None] = mapped_column(String(400))  # where it is listed
+    event_at: Mapped[datetime | None] = mapped_column(DateTime, index=True)  # meeting / hearing time, UTC
+    event_date_only: Mapped[bool] = mapped_column(Boolean, default=False)
+    doc_url: Mapped[str | None] = mapped_column(String(400))  # document whose text is read
+    text: Mapped[str | None] = mapped_column(Text)
+    text_status: Mapped[str] = mapped_column(String(20), default="none")  # none|pending|ok|failed
+    extra: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str | None] = mapped_column(String(20), index=True)  # relevant|possible|not_relevant
+    score: Mapped[int] = mapped_column(Integer, default=0)
+    topics: Mapped[list] = mapped_column(JSON, default=list)
+    evidence: Mapped[list] = mapped_column(JSON, default=list)
+    rules_version: Mapped[str | None] = mapped_column(String(20))
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime)
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    backfill: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
 Index("ix_events_feed", Event.importance, Event.detected_at)

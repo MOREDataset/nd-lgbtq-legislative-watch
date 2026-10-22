@@ -69,6 +69,9 @@ class Settings:
     # Extra assemblies to always ingest, e.g. "69-2025" for historical validation.
     extra_assemblies: tuple[str, ...] = ()
     stale_after_minutes: int = 180
+    # Early signals: interim committees, agency rule hearings, ballot measures, tracker cross-check.
+    signals_enabled: bool = True
+    max_signal_docs_per_run: int = 80
     polling: PollingPolicy = field(default_factory=PollingPolicy)
     admin_password: str | None = None
 
@@ -90,6 +93,8 @@ def load_settings() -> Settings:
         assemblies_to_track=_env_int("NDWATCH_ASSEMBLIES_TO_TRACK", Settings.assemblies_to_track),
         extra_assemblies=extra,
         stale_after_minutes=_env_int("NDWATCH_STALE_AFTER_MINUTES", Settings.stale_after_minutes),
+        signals_enabled=(_env("NDWATCH_SIGNALS", "on") or "on").lower() not in ("0", "off", "false", "no"),
+        max_signal_docs_per_run=_env_int("NDWATCH_MAX_SIGNAL_DOCS_PER_RUN", Settings.max_signal_docs_per_run),
         polling=PollingPolicy(
             active_session=_env_int("NDWATCH_POLL_ACTIVE_MIN", PollingPolicy.active_session),
             prefiling=_env_int("NDWATCH_POLL_PREFILING_MIN", PollingPolicy.prefiling),

@@ -42,7 +42,8 @@ def loaded(tmp_path_factory):
     engine = make_engine(f"sqlite:///{db_path}")
     init_db(engine)
     factory = session_factory(engine)
-    settings = dataclasses.replace(Settings(), request_interval=0, max_retries=0, extra_assemblies=("69-2025",))
+    settings = dataclasses.replace(Settings(), request_interval=0, max_retries=0, extra_assemblies=("69-2025",),
+                                   signals_enabled=False)
     report = run_cycle(factory, ReplayFetcher(FIXTURES), settings, force=True, only_assemblies=["69-2025"])
     return factory, settings, report
 

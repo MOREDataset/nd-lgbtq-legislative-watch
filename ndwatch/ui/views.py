@@ -449,6 +449,72 @@ def hearings() -> None:
     footer()
 
 
+# ------------------------------------------------------------------ early signals
+
+_SIGNAL_GROUPS = [
+    ("agency_rule", "Proposed agency rules",
+     "State agencies change their rules (the ND Administrative Code) without a bill. Each change has a public hearing "
+     "and a comment period."),
+    ("bill_draft", "Bill drafts from interim committees",
+     "Drafts prepared between sessions. Many become bills in the next session."),
+    ("interim_study", "Interim committee studies",
+     "Topics the Legislature asked its committees to study between sessions. Studies often lead to bills."),
+    ("committee_meeting", "Committee meeting agendas", "Upcoming or recent interim committee meetings whose agenda mentions a matching topic."),
+    ("committee_memo", "Committee memos", "Background papers prepared for interim committees."),
+    ("ballot_measure", "Ballot measures", "Measures on the ballot or petitions in circulation (Secretary of State)."),
+]
+
+
+def early_signals() -> None:
+    header()
+    st.markdown("## Early signals")
+    st.caption(
+        "Official items outside of bills that can show what is coming: interim committee studies and bill drafts, "
+        "proposed agency rules, and ballot measures. They are matched with the same topic rules as bills, so a match "
+        "only means the words appear; read the linked document to judge it."
+    )
+    data = cached("early_signals", D.early_signals)
+    items = data["items"]
+    checked = data["checked"]
+    total = sum(v for k, v in checked.items() if k != "tracker")
+    if not total:
+        html('<div class="nw-note">The monitor has not read these sources yet. They are checked about once a day.</div>')
+        footer()
+        return
+    html(C.stats([
+        ("Items checked", total, "studies, drafts, memos, meetings, rule hearings and measures", False),
+        ("Flagged", sum(1 for i in items if i["status"] == "relevant"), "strong matches", True),
+        ("Possible", sum(1 for i in items if i["status"] == "possible"), "weaker matches", False),
+    ]))
+    if not items:
+        html('<div class="nw-note">Nothing in these sources matches the topic rules right now.</div>')
+    for kind, label, note in _SIGNAL_GROUPS:
+        group = [i for i in items if i["kind"] == kind]
+        if not group:
+            continue
+        st.markdown(f"### {label}")
+        st.caption(f"{note} {checked.get(kind, 0)} checked.")
+        for i in group:
+            when = fmt_date(i["event_at"], i["date_only"]) if i["event_at"] else None
+            pill = '<span class="nw-pill">possible match</span>' if i["status"] == "possible" else '<span class="nw-pill live">match</span>'
+            meta = [C.e(i["body"] or "")]
+            if when:
+                meta.append(("Hearing " if kind == "agency_rule" else "Meeting " if kind == "committee_meeting" else "") + C.e(when))
+            links = [C.link(i["url"], "Official document")] if i["url"] else []
+            if i["extra"].get("notice") and i["extra"].get("notice") != i["url"]:
+                links.append(C.link(i["extra"]["notice"], "Hearing notice"))
+            if i["page_url"] and i["page_url"] != i["url"] and i["page_url"].startswith("https://ndlegis.gov/assembly"):
+                links.append(C.link(i["page_url"], "Committee page"))
+            html(
+                f'<div class="nw-card"><div class="top">{pill}</div>'
+                f'<div class="sum">{C.e(i["title"] if kind not in ("committee_meeting", "agency_rule") else i["headline"])}</div>'
+                f'<div class="meta">{" &middot; ".join(m for m in meta if m)}</div>'
+                f'{C.evidence_quotes(i["evidence"], limit=2)}'
+                f'<div class="meta">{" &middot; ".join(links)}</div></div>'
+            )
+    footer()
+
+
 # ------------------------------------------------------------------ activity
 
 
@@ -510,6 +576,10 @@ orientation, gender identity, healthcare, schools, identity documents, marriage 
 the official title and summary, then in the full text of every version of the bill. Some words only count when related
 words appear nearby (for example, “restroom” near “sex”). Bills with weaker matches go to a review list, where a person
 decides whether they belong, and writes down why.
+
+**Early signals.** The Early Signals page shows official items that can come before a bill: interim committee
+studies and bill drafts, state agency rule hearings, and ballot measures from the Secretary of State. Lists kept by
+advocacy groups are only used to double-check that no bill was missed; they are never shown as facts.
 
 **What this site does not do.** It does not take political positions. Labels such as “may restrict access or
 protections” describe possible effects, and are written by reviewers with a stated reason. Automatic matches only show

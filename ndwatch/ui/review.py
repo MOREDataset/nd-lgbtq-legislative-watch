@@ -31,6 +31,27 @@ def review() -> None:
 
     st.caption("Decisions are public on each bill page together with your reason. Describe effects, not opinions.")
     who = st.text_input("Your initials or role (shown with decisions)", key="rv_who", max_chars=40)
+    suggestions = cached("tracker_suggestions", D.tracker_suggestions)
+    if suggestions:
+        with st.expander(f"Advocacy trackers name {len(suggestions)} bill(s) we have not listed"):
+            st.caption("From the Trans Legislation Tracker and the ACLU legislative tracker. Their lists are not used as "
+                       "facts; they only point to bills worth a look. Open the bill, read it, and decide below.")
+            for sg in suggestions:
+                st.markdown(f"**{sg['name']}** ({sg['uid'].split(':')[0]}) · {', '.join(sg['trackers'])}  \n"
+                            f"{sg['summary'] or ''}  \n[Bill page](bills?bill={sg['uid']})")
+                with st.form(f"t-{sg['uid']}"):
+                    decision = st.radio("Decision", ["include", "exclude"], horizontal=True, key=f"td-{sg['uid']}")
+                    reason = st.text_area("Reason (required, shown publicly)", max_chars=600, key=f"tr-{sg['uid']}")
+                    if st.form_submit_button("Save decision"):
+                        if not reason.strip():
+                            st.error("Please give a reason.")
+                        else:
+                            with db_session() as db:
+                                db.add(ReviewDecision(bill_uid=sg["uid"], decision=decision, reason=reason.strip(),
+                                                      reviewer=who or None, created_at=utcnow()))
+                                db.commit()
+                            clear_cache()
+                            st.success("Saved.")
     show = st.radio("Show", ["Waiting for review", "All flagged bills"], horizontal=True)
     queue = cached("review_queue", D.review_queue)
     if show == "Waiting for review":

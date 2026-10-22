@@ -14,8 +14,9 @@ To run it, list the assemblies in `.github/evaluate-request.txt` and push.
 | 2023 (68th) | 1,006 | 3,679 | 23 → 22 | 11 → 6 |
 | 2025 (69th) | 1,106 | 3,834 | 13 → 11 | 15 → 9 |
 
-Every bill that news coverage and advocacy trackers identified as LGBTQ+-related
-is still listed automatically:
+These bills are still listed automatically. Each was checked by reading the
+matched passages; the list includes the bills named in news coverage of both
+sessions:
 
 - **2023:** HB 1205, 1249, 1254, 1281, 1297, 1301, 1332, 1333, 1473, 1474, 1489,
   1522 and 1526; SB 2199, 2231, 2260 and 2360; HCR 3010.

@@ -1,0 +1,75 @@
+# Loads whole past assemblies (including every bill text) into a throwaway SQLite
+# database and writes a CSV of every bill's relevance result. Used to tune
+# ndwatch/relevance/topics.yaml against real bills. Does not touch the live database.
+# Each assembly runs as its own job (one after another, to stay polite) and its
+# results go to a separate branch, e.g. `relevance-eval-68-2023`.
+name: Evaluate relevance rules
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/evaluate-request.txt"]
+  workflow_dispatch:
+
+permissions:
+  contents: write  # pushes results to the `relevance-eval` branch
+
+concurrency:
+  group: evaluate-relevance
+  cancel-in-progress: false
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    outputs:
+      assemblies: ${{ steps.read.outputs.assemblies }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        run: echo "assemblies=$(grep -v '^#' .github/evaluate-request.txt | grep -v '^ *$' | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+
+  evaluate:
+    needs: list
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        assembly: ${{ fromJSON(needs.list.outputs.assemblies) }}
+    env:
+      DATABASE_URL: sqlite:///eval/ndwatch-eval.db
+      NDWATCH_MAX_PDFS_PER_RUN: "100000"
+      NDWATCH_MAX_TESTIMONY_PAGES_PER_RUN: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Load the assembly with all bill texts (polite pace, one request every 1.5 s)
+        env:
+          ASSEMBLY: ${{ matrix.assembly }}
+        run: |
+          mkdir -p eval
+          python -m ndwatch monitor --force --trigger evaluation --assembly "$ASSEMBLY" > "eval/run.json" || echo "run reported a failure"
+          tail -c 3000 eval/run.json
+          python -m ndwatch relevance-report eval/relevance.csv
+      - name: Save results to a relevance-eval branch
+        env:
+          ASSEMBLY: ${{ matrix.assembly }}
+        run: |
+          mkdir -p /tmp/out
+          cp eval/relevance.csv eval/run.json /tmp/out/
+          gzip -9 -c eval/ndwatch-eval.db > /tmp/out/ndwatch-eval.db.gz
+          ls -la /tmp/out
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan "relevance-eval-$ASSEMBLY"
+          git rm -rqf .
+          git clean -fdxq
+          cp /tmp/out/* .
+          find . -maxdepth 1 -type f -size +95M -print -delete
+          git add -A
+          git commit -qm "Relevance evaluation $ASSEMBLY $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -f origin "relevance-eval-$ASSEMBLY"

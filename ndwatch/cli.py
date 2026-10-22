@@ -7,6 +7,7 @@ Commands
   review list             bills waiting for a human decision
   review include|exclude  record a reviewer decision with a reason
   collect-samples DIR     save raw official responses for inspection/tests
+  relevance-report CSV    write every bill's relevance result to a CSV file
 """
 
 from __future__ import annotations
@@ -122,6 +123,32 @@ def cmd_collect_samples(args, settings) -> int:
     return 0 if all(m["ok"] for m in manifest) else 1
 
 
+def cmd_relevance_report(args, settings) -> int:
+    """One row per bill: status, score, topics and the strongest evidence (for tuning rules)."""
+    import csv
+
+    factory = _factory(settings)
+    with factory() as db:
+        rows = db.execute(
+            select(Bill, Relevance).join(Relevance, Relevance.bill_uid == Bill.uid, isouter=True)
+            .order_by(Bill.session_id, Bill.name)
+        ).all()
+        with open(args.output, "w", newline="", encoding="utf-8") as fh:
+            w = csv.writer(fh)
+            w.writerow(["bill", "session", "status", "score", "topics", "texts_read", "title_summary", "evidence"])
+            for bill, rel in rows:
+                ev = []
+                for e in (rel.evidence if rel else [])[:6]:
+                    ev.append(f"[{e.get('where')} w{e.get('weight')} {e.get('topic')}] {e.get('snippet', '')[:160]}")
+                w.writerow([
+                    bill.name, bill.session_id, rel.status if rel else "", rel.score if rel else "",
+                    ";".join(rel.topics) if rel else "", len(rel.text_versions_used) if rel else 0,
+                    (bill.summary or bill.title or "")[:300], " || ".join(ev),
+                ])
+    print(f"Wrote {len(rows)} bills to {args.output}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     p = argparse.ArgumentParser(prog="ndwatch")
@@ -143,6 +170,8 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("directory")
     c.add_argument("--assembly", action="append")
     c.add_argument("--url", action="append")
+    rr = sub.add_parser("relevance-report")
+    rr.add_argument("output")
     args = p.parse_args(argv)
     settings = load_settings()
     if args.cmd == "init-db":
@@ -154,6 +183,7 @@ def main(argv: list[str] | None = None) -> int:
         "health": cmd_health,
         "review": cmd_review,
         "collect-samples": cmd_collect_samples,
+        "relevance-report": cmd_relevance_report,
     }[args.cmd](args, settings)
 
 

@@ -1,0 +1,4 @@
+# Assemblies to load in full (bill text included) for checking the relevance rules.
+# Changing this file starts the "Evaluate relevance rules" workflow.
+68-2023
+69-2025

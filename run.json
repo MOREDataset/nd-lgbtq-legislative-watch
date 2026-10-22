@@ -1,0 +1,15 @@
+{
+  "run_id": 1,
+  "status": "ok",
+  "mode": "off_season",
+  "events_created": 20598,
+  "notes": [
+    "Assemblies checked: 69-2025",
+    "69-2025: 1106 bills, 1106 new, 0 updated (first load: history recorded quietly)",
+    "69-2025: 2234 roll calls stored or completed",
+    "Relevance: 1106 bills (re)checked, 7 newly flagged",
+    "Bill text: 3834 versions read, 0 failed, 0 waiting for later runs",
+    "Relevance: 1106 bills (re)checked, 6 newly flagged"
+  ],
+  "errors": []
+}

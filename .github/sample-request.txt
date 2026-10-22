@@ -1,10 +1,10 @@
 # Extra official URLs to download in the "Collect source samples" workflow (one per line).
-https://ndlegis.gov/assembly/69-2025/regular/documents/25-0915-02000.pdf
-https://ndlegis.gov/assembly/69-2025/regular/documents/25-0915-02004m.pdf
-https://ndlegis.gov/assembly/69-2025/regular/documents/25-0915-03000.pdf
-https://ndlegis.gov/assembly/69-2025/regular/documents/25-0915-04000.pdf
-https://ndlegis.gov/assembly/69-2025/regular/documents/25-0440-03000.pdf
-https://ndlegis.gov/assembly/69-2025/regular/documents/25-0440-07000.pdf
-https://ndlegis.gov/assembly/69-2025/regular/documents/25-0885-01000.pdf
-https://ndlegis.gov/assembly/69-2025/regular/documents/25-0885-02000.pdf
-https://ndlegis.gov/assembly/69-2025/regular/documents/25-0552-07000.pdf
+https://ndlegis.gov/assembly/69-2025/committees/interim
+https://ndlegis.gov/assembly/69-2025/committees/interim/human-services-committee
+https://ndlegis.gov/assembly/69-2025/committees/interim/administrative-rules-committee
+https://ndlegis.gov/assembly/69-2025/session-interim
+https://ndlegis.gov/assembly/69-2025/session-interim/committee-memorandums
+https://ndlegis.gov/sites/default/files/resource/69-2025/study-directives/27.9003.02000.pdf
+https://ndlegis.gov/agency-rules/north-dakota-administrative-code/index.html
+https://ndlegis.gov/administrative-rules-supplements
+https://ndlegis.gov/research-and-archives/legislative-management-final-reports

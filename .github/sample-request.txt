@@ -1,15 +1,10 @@
 # Extra official URLs to download in the "Collect source samples" workflow (one per line).
-https://ndlegis.gov/events/agency-hearings
-https://ndlegis.gov/node/48381
-https://ndlegis.gov/sites/default/files/rule-changes/notices/dhhs061926notice.pdf
-https://ndlegis.gov/sites/default/files/rule-changes/changes/deq032024changes.pdf
-https://ndlegis.gov/assembly/69-2025/committees/interim/health-care-committee
-https://ndlegis.gov/assembly/69-2025/committees/interim/judiciary-committee
-https://ndlegis.gov/assembly/69-2025/committees/interim/education-committee
-https://ndlegis.gov/sites/default/files/pdf/committees/69-2025/27.0221.01000.pdf
-https://ndlegis.gov/assembly/69-2025/interim/27-5176-02000-meeting-agenda.pdf
-https://www.sos.nd.gov/elections/voter/ballot-measures/measures-ballot
-https://www.sos.nd.gov/elections/voter/ballot-measures
-https://sos.nd.gov/news
-https://www.aclu.org/legislative-attacks-on-lgbtq-rights-2025?state=ND
-https://translegislation.com/bills/2025/ND
+https://ndlegis.gov/events/2026/10/13/department-environmental-quality
+https://ndlegis.gov/events/2026/09/09/department-public-instruction
+https://ndlegis.gov/events/2026/06/04/department-public-instruction
+https://ndlegis.gov/events/2026/09/18/dhhs-home-and-community-based-services
+https://ndlegis.gov/events/2026/09/18/dhhs-foster-homes-adults
+https://www.sos.nd.gov/elections/voter/ballot-measures/petitions-circulation
+https://www.sos.nd.gov/elections/voter/ballot-measures/measure-and-petition-archive
+https://translegislation.com/bills/2023/ND
+https://www.aclu.org/legislative-attacks-on-lgbtq-rights?state=ND

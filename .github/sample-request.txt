@@ -1,13 +1,15 @@
 # Extra official URLs to download in the "Collect source samples" workflow (one per line).
-https://ndlegis.gov/assembly/69-2025/committees/interim
-https://ndlegis.gov/assembly/69-2025/committees/interim/human-services-committee
-https://ndlegis.gov/assembly/69-2025/committees/interim/administrative-rules-committee
-https://ndlegis.gov/assembly/69-2025/session-interim
-https://ndlegis.gov/assembly/69-2025/session-interim/committee-memorandums
-https://ndlegis.gov/sites/default/files/resource/69-2025/study-directives/27.9003.02000.pdf
-https://ndlegis.gov/agency-rules/north-dakota-administrative-code/index.html
-https://ndlegis.gov/administrative-rules-supplements
-https://ndlegis.gov/research-and-archives/legislative-management-final-reports
-# rerun 2155
-# rerun 2156
-# rerun 2158
+https://ndlegis.gov/events/agency-hearings
+https://ndlegis.gov/node/48381
+https://ndlegis.gov/sites/default/files/rule-changes/notices/dhhs061926notice.pdf
+https://ndlegis.gov/sites/default/files/rule-changes/changes/deq032024changes.pdf
+https://ndlegis.gov/assembly/69-2025/committees/interim/health-care-committee
+https://ndlegis.gov/assembly/69-2025/committees/interim/judiciary-committee
+https://ndlegis.gov/assembly/69-2025/committees/interim/education-committee
+https://ndlegis.gov/sites/default/files/pdf/committees/69-2025/27.0221.01000.pdf
+https://ndlegis.gov/assembly/69-2025/interim/27-5176-02000-meeting-agenda.pdf
+https://www.sos.nd.gov/elections/voter/ballot-measures/measures-ballot
+https://www.sos.nd.gov/elections/voter/ballot-measures
+https://sos.nd.gov/news
+https://www.aclu.org/legislative-attacks-on-lgbtq-rights-2025?state=ND
+https://translegislation.com/bills/2025/ND

@@ -134,6 +134,8 @@ def feed(db: DbSession, uids: set[str] | None = None, limit: int = 200, min_impo
         # "Flagged by our matcher" is not legislative news for a bill that has already finished.
         if e.kind == "flagged_relevant" and e.backfill:
             continue
+        if e.kind.startswith("signal_") and e.backfill:
+            continue
         items.append({
             "id": e.id, "uid": e.bill_uid, "bill": name, "bill_summary": summary, "kind": e.kind,
             "importance": e.importance, "title": e.title, "detail": e.detail, "event_date": e.event_date,
@@ -183,6 +185,7 @@ def health(db: DbSession, settings: Settings) -> dict:
          "last_ok": ok_latest[k].checked_at if k in ok_latest else None,
          "source_last_updated": ok_latest[k].source_last_updated if k in ok_latest else None}
         for k, v in sorted(latest.items())
+        if not k.startswith("interim:")  # one row per committee page would drown the table
     ]
     return h
 
@@ -311,3 +314,36 @@ def all_bill_count(db: DbSession) -> int:
 
 def action_count(db: DbSession) -> int:
     return len(db.scalars(select(BillAction.id)).all())
+
+
+# ------------------------------------------------------------------ early signals
+
+
+def early_signals(db: DbSession) -> dict:
+    """Flagged items from interim committees, agency rule hearings and ballot measures."""
+    from ndwatch.db.schema import Signal
+    from ndwatch.signals import signal_headline
+
+    rows = db.scalars(
+        select(Signal).where(Signal.kind != "tracker", Signal.status.in_(["relevant", "possible"]),
+                             Signal.removed_at.is_(None))
+    ).all()
+    items = []
+    for s in rows:
+        items.append({
+            "id": s.id, "kind": s.kind, "body": s.body, "title": s.title, "detail": s.detail, "status": s.status,
+            "score": s.score, "topics": s.topics, "evidence": s.evidence, "url": s.url, "page_url": s.page_url,
+            "event_at": s.event_at, "date_only": s.event_date_only, "first_seen_at": s.first_seen_at,
+            "headline": signal_headline(s), "extra": s.extra or {},
+        })
+    items.sort(key=lambda i: (i["status"] != "relevant", -(i["event_at"] or i["first_seen_at"]).timestamp()))
+    counts: dict[str, int] = defaultdict(int)
+    for kind in db.scalars(select(Signal.kind).where(Signal.removed_at.is_(None))):
+        counts[kind] += 1
+    return {"items": items, "checked": dict(counts)}
+
+
+def tracker_suggestions(db: DbSession) -> list[dict]:
+    from ndwatch.signals import tracker_suggestions as ts
+
+    return ts(db)

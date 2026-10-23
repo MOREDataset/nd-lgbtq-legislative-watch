@@ -117,7 +117,27 @@ content hash. Unchanged files are detected by hash and cause no work.
 - Historical assemblies (no current session, not the newest): refreshed at most
   once a day.
 
-## 6. Not used yet
+## 6. Early signals (before a bill exists)
+
+Shown on the **Early Signals** page. Scored with the same rules as bills; a
+new match becomes an entry in the activity feed. The first load is treated as
+history, not news.
+
+| Source | URL | How often |
+|---|---|---|
+| Interim committees: studies, bill drafts, memos, meeting agendas | `ndlegis.gov/assembly/{assembly}/committees/interim` and each committee page | once a day |
+| Agency rule hearings (ND Administrative Code) | RSS `ndlegis.gov/events/agency-hearings`, then each event page once (notice and proposed changes PDFs) | every run |
+| Ballot measures and petitions in circulation | `sos.nd.gov/elections/voter/ballot-measures/...` | once a day |
+| Advocacy trackers (cross-check only) | translegislation.com, aclu.org | once a day |
+
+Hearing times come from the calendar file on the official event page. Items
+that disappear from an official page are kept and marked as removed.
+
+Advocacy trackers are **never** used as facts. A bill they name that we have
+not listed only shows up on the Reviewer page as a "possible miss" for a person
+to include or exclude, with a reason.
+
+## 7. Not used yet
 
 - `century_code.json` (70 MB). Layer C of relevance detection (bills that change
   a Century Code section whose current text mentions a topic) is implemented in

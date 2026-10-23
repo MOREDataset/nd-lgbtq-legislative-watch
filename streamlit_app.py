@@ -28,6 +28,7 @@ pages = {
     "overview": st.Page(views.overview, title="Overview", url_path="overview", default=True),
     "bills": st.Page(views.bills, title="Bills", url_path="bills"),
     "hearings": st.Page(views.hearings, title="Hearings", url_path="hearings"),
+    "signals": st.Page(views.early_signals, title="Early Signals", url_path="signals"),
     "activity": st.Page(views.activity, title="Recent Activity", url_path="activity"),
     "following": st.Page(views.following, title="Following", url_path="following"),
     "about": st.Page(views.about, title="About & Sources", url_path="about"),

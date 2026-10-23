@@ -112,6 +112,10 @@ or vote schedule (we never predict vote dates), testimony and the testimony
 deadline rule come from official web pages, and the app only states an
 effective date the official record supports.
 
+The **Early Signals** page watches what happens before a bill is filed:
+interim committee studies and bill drafts, agency rule hearings, and ballot
+measures. Advocacy trackers are used only as a cross-check on the Reviewer page.
+
 ## Trust rules the code follows
 
 - Missing data is shown as missing ("No upcoming event has been officially

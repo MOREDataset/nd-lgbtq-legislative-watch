@@ -1,5 +1,6 @@
 # Independent check that monitoring is actually happening ("missed-run detection").
-# Fails, and opens an issue, if no successful monitoring run is recorded recently.
+# Fails, and opens an issue, if no successful monitoring run is recorded recently,
+# or if the hosted database is close to its free-tier size limit.
 name: Monitoring health check
 
 on:
@@ -41,8 +42,8 @@ jobs:
           existing=$(gh issue list --label monitor-failure --state open --json number --jq 'length')
           if [ "$existing" = "0" ]; then
             gh label create monitor-failure --color B60205 --description "Automatic monitoring problem" 2>/dev/null || true
-            gh issue create --label monitor-failure --title "Monitoring is stale" \
-              --body "No successful monitoring run was recorded recently. Details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            gh issue create --label monitor-failure --title "Monitoring needs attention" \
+              --body "The health check failed: either no successful monitoring run was recorded recently, or the database is close to its size limit. The last lines of the run log say which. Details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           fi
       - name: Make sure the monitor schedule is enabled
         if: always()

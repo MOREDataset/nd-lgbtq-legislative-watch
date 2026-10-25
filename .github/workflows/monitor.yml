@@ -1,5 +1,5 @@
 # Checks official North Dakota legislative sources and updates the database.
-# Runs every hour at :17 (avoiding the top of the hour, when GitHub's scheduler
+# Runs every hour at :23 (avoiding the top of the hour, when GitHub's scheduler
 # is busiest). The program itself decides whether a full check is due, based on
 # whether the Legislature is in session (see NDWATCH_POLL_* settings), so
 # off-season runs finish in seconds.

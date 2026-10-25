@@ -59,10 +59,16 @@ class Path:
     conference: bool = False
     current_key: str | None = None
     notes: list[str] = field(default_factory=list)
+    item_veto: bool = False
+    constitutional: bool = False  # a proposed amendment to the ND Constitution
+    # None = not stated; True/False = the official record says the emergency clause carried/failed.
+    emergency_clause: bool | None = None
 
     @property
     def stage_label(self) -> str:
         if self.outcome:
+            if self.outcome == OUTCOME_ADOPTED and self.constitutional:
+                return TO_VOTERS_LABEL
             return OUTCOME_LABELS[self.outcome]
         for s in self.steps:
             if s.state == CURRENT:
@@ -80,6 +86,30 @@ def origin_chamber(name: str, chamber: str | None) -> str:
     if chamber in ("House", "Senate"):
         return chamber
     return "Senate" if bill_kind(name).startswith("S") else "House"
+
+
+def is_constitutional_amendment(name: str | None, title: str | None) -> bool:
+    """A concurrent resolution that proposes changing the North Dakota Constitution.
+
+    These never go to the Governor. Once both chambers adopt one, it goes to the
+    voters at a statewide election and takes effect only if voters approve it.
+    """
+    kind = bill_kind(name or "")
+    if kind not in ("HCR", "SCR"):
+        return False
+    return bool(re.search(r"\b(amend|create|repeal)\b[^;]*\bconstitution of north dakota\b", title or "", re.I))
+
+
+TO_VOTERS_LABEL = "Approved by the Legislature; goes to the voters"
+
+
+def outcome_label(outcome: str | None, name: str | None = None, title: str | None = None) -> str | None:
+    """Label for a final outcome, with the one case where the generic label would mislead."""
+    if not outcome:
+        return None
+    if outcome == OUTCOME_ADOPTED and is_constitutional_amendment(name, title):
+        return TO_VOTERS_LABEL
+    return OUTCOME_LABELS[outcome]
 
 
 def other(chamber: str) -> str:
@@ -108,7 +138,10 @@ _RX = {
 }
 
 
-def build_path(name: str, chamber: str | None, actions: list[ActionLike], passed_flag: bool | None = None) -> Path:
+def build_path(
+    name: str, chamber: str | None, actions: list[ActionLike], passed_flag: bool | None = None,
+    title: str | None = None,
+) -> Path:
     kind = bill_kind(name)
     origin = origin_chamber(name, chamber)
     second = other(origin)
@@ -127,7 +160,9 @@ def build_path(name: str, chamber: str | None, actions: list[ActionLike], passed
     steps.append(Step("final", "Final outcome"))
     by_key = {s.key: s for s in steps}
 
-    path = Path(steps=steps, outcome=None)
+    path = Path(steps=steps, outcome=None, constitutional=is_constitutional_amendment(name, title))
+    if path.constitutional:
+        by_key["final"].label = "Statewide vote by the people"
     ordered = sorted(actions, key=lambda a: (a.date or datetime.min))
 
     def mark(key: str, state: str, when: datetime | None, note: str | None = None) -> None:
@@ -139,6 +174,7 @@ def build_path(name: str, chamber: str | None, actions: list[ActionLike], passed
         if note:
             s.note = note
 
+    overridden_in: set[str] = set()
     for a in ordered:
         d = (a.description or "").strip()
         ch = a.chamber
@@ -146,6 +182,10 @@ def build_path(name: str, chamber: str | None, actions: list[ActionLike], passed
         if _RX["withdrawn"].search(d):
             path.outcome = OUTCOME_WITHDRAWN
             continue
+        if re.search(r"\bemergency clause carried\b", d, re.I):
+            path.emergency_clause = True
+        elif re.search(r"\bemergency clause failed\b", d, re.I):
+            path.emergency_clause = False
         if _RX["conference"].search(d):
             path.conference = True
         if _RX["amend"].search(d):
@@ -168,12 +208,30 @@ def build_path(name: str, chamber: str | None, actions: list[ActionLike], passed
             mark(key, DONE, a.date, note=d)
             continue
         if _RX["signed"].search(d):
-            mark("governor", DONE, a.date, note="Signed by the Governor")
+            if re.search(r"\bitem veto\b", d, re.I):
+                path.item_veto = True
+                mark("governor", DONE, a.date, note="Signed, with some parts vetoed")
+                path.notes.append(
+                    "The Governor signed this bill but vetoed some parts of it (an item veto, "
+                    "which is allowed for parts of spending bills). Check the official actions for "
+                    "whether the Legislature overrode any of those vetoes."
+                )
+            else:
+                mark("governor", DONE, a.date, note="Signed by the Governor")
             path.outcome = OUTCOME_LAW
             continue
         if _RX["without_signature"].search(d):
             mark("governor", DONE, a.date, note="Became law without the Governor's signature")
             path.outcome = OUTCOME_LAW
+            continue
+        if re.search(r"\bpassed over veto\b", d, re.I):
+            # North Dakota's wording for a successful override vote in ONE chamber.
+            # The veto is overridden only when both chambers do this.
+            if ch in ("House", "Senate"):
+                overridden_in.add(ch)
+            if overridden_in >= {"House", "Senate"} or single_chamber:
+                mark("governor", DONE, a.date, note="Veto overridden")
+                path.outcome = OUTCOME_LAW
             continue
         if _RX["override_ok"].search(d):
             mark("governor", DONE, a.date, note="Veto overridden")
@@ -183,6 +241,8 @@ def build_path(name: str, chamber: str | None, actions: list[ActionLike], passed
             path.outcome = OUTCOME_VETOED
             continue
         if _RX["veto"].search(d):
+            if path.outcome == OUTCOME_LAW and by_key.get("governor") and by_key["governor"].note == "Veto overridden":
+                continue
             mark("governor", FAILED, a.date, note="Vetoed")
             path.outcome = OUTCOME_VETOED
             continue
@@ -225,7 +285,14 @@ def build_path(name: str, chamber: str | None, actions: list[ActionLike], passed
         if steps[i].state in (UPCOMING, CURRENT):
             steps[i].state = DONE
 
-    if path.outcome in (OUTCOME_LAW, OUTCOME_ADOPTED):
+    if path.outcome == OUTCOME_ADOPTED and path.constitutional:
+        # Adopted by both chambers; the people still have to vote on it.
+        for s in steps:
+            if s.key != "final" and s.state in (UPCOMING, CURRENT):
+                s.state = DONE
+        by_key["final"].state = CURRENT
+        by_key["final"].note = "Goes to the voters at a statewide election"
+    elif path.outcome in (OUTCOME_LAW, OUTCOME_ADOPTED):
         by_key["final"].state = DONE
         by_key["final"].note = OUTCOME_LABELS[path.outcome]
         for s in steps:

@@ -31,7 +31,7 @@ from ndwatch.db.schema import (
     Summary,
 )
 from ndwatch.events import HIGH, LOW, MEDIUM, describe_action
-from ndwatch.process import OUTCOME_LABELS, bill_kind, build_path
+from ndwatch.process import bill_kind, build_path, outcome_label
 from ndwatch.sources.api import fix_source_url
 from ndwatch.sources.api_models import (
     ApiAssemblySummary,
@@ -488,7 +488,7 @@ def _sync_hearings(db: DbSession, bill: Bill, api: ApiBill, writer: EventWriter,
 
 
 def _update_path(db: DbSession, bill: Bill, writer: EventWriter) -> None:
-    path = build_path(bill.name, bill.chamber, bill.actions, bill.passed)
+    path = build_path(bill.name, bill.chamber, bill.actions, bill.passed, title=bill.title)
     old_outcome = bill.outcome
     bill.stage = path.current_key or ("final" if path.outcome else None)
     bill.outcome = path.outcome
@@ -499,7 +499,7 @@ def _update_path(db: DbSession, bill: Bill, writer: EventWriter) -> None:
                 kind=f"outcome_{path.outcome}",
                 importance=HIGH,
                 bill_uid=bill.uid,
-                title=f"Final outcome for {bill.name}: {OUTCOME_LABELS[path.outcome].lower()}.",
+                title=f"Final outcome for {bill.name}: {outcome_label(path.outcome, bill.name, bill.title).lower()}.",
                 detail=f"Official status: “{bill.current_status}”" if bill.current_status else None,
                 event_date=bill.last_action_date,
                 event_date_only=True,

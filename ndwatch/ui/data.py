@@ -29,7 +29,7 @@ from ndwatch.db.schema import (
     TestimonyCheck,
 )
 from ndwatch.monitor import monitor_health
-from ndwatch.process import OUTCOME_LABELS, build_path
+from ndwatch.process import build_path, outcome_label
 from ndwatch.relevance.detector import default_rules
 from ndwatch.timeutil import utcnow
 
@@ -99,7 +99,7 @@ def bill_cards(db: DbSession, include_possible: bool = False) -> list[dict]:
             "title": b.title,
             "status": b.current_status,
             "outcome": b.outcome,
-            "outcome_label": OUTCOME_LABELS.get(b.outcome) if b.outcome else None,
+            "outcome_label": outcome_label(b.outcome, b.name, b.title),
             "stage": b.stage,
             "session_id": b.session_id,
             "session_name": b.session_name,
@@ -215,7 +215,7 @@ def bill_detail(db: DbSession, uid: str) -> dict | None:
          "category": a.category, "roll_call_id": a.roll_call_id, "version": a.bill_version}
         for a in sorted(b.actions, key=lambda a: (a.date or datetime.min, a.position))
     ]
-    path = build_path(b.name, b.chamber, list(b.actions), b.passed)
+    path = build_path(b.name, b.chamber, list(b.actions), b.passed, title=b.title)
 
     hearings = [
         {"when": h.starts_at, "type": h.type, "public": (h.type or "").lower() == "bill hearing",

@@ -151,3 +151,11 @@ header[data-testid="stHeader"] { background: var(--paper); }
 /* Bill titles can be long: keep the page headline readable on phones */
 .stApp h1 { font-size: clamp(1.65rem, 5.2vw, 2.5rem) !important; line-height: 1.15 !important; }
 .stApp h2 { font-size: clamp(1.4rem, 4.2vw, 1.9rem) !important; }
+
+/* bill timeline: plain-English line first, official wording underneath */
+.nw-timeline { list-style: none; margin: .2rem 0 .6rem; padding: 0; border-left: 2px solid var(--rule); }
+.nw-timeline li { position: relative; padding: .1rem 0 .75rem .9rem; }
+.nw-timeline li::before { content: ""; position: absolute; left: -6px; top: .45rem; width: 10px; height: 10px; border-radius: 50%; background: var(--card); border: 2px solid var(--accent); box-sizing: border-box; }
+.nw-timeline .when { font-family: var(--mono); font-size: .78rem; color: var(--muted); }
+.nw-timeline .what { font-size: .95rem; line-height: 1.4; color: var(--ink); }
+.nw-timeline .off { font-size: .8rem; color: var(--muted); margin-top: .15rem; }

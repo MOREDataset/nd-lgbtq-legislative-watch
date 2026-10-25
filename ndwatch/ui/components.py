@@ -87,7 +87,7 @@ def status_pills(card: dict) -> str:
     elif card.get("outcome") in ("failed", "vetoed", "withdrawn"):
         out.append(f'<span class="nw-pill fail">{e(card.get("outcome_label"))}</span>')
     elif card.get("outcome") == "adopted":
-        out.append('<span class="nw-pill law">Adopted</span>')
+        out.append(f'<span class="nw-pill law">{e(card.get("outcome_label") or "Adopted")}</span>')
     elif card.get("live"):
         out.append('<span class="nw-pill live">Active</span>')
     else:

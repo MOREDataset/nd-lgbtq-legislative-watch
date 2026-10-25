@@ -12,6 +12,8 @@ from ndwatch.explain import (
     IMPACT_LABELS,
     about_line,
     century_code_links,
+    effective_date_note,
+    explain_action,
     explain_status,
     headline,
     kind_name,
@@ -208,6 +210,8 @@ def bill_page(uid: str) -> None:
     pills = []
     if d["outcome"] == "became_law":
         pills.append('<span class="nw-pill law">Became law</span>')
+    elif d["outcome"] == "adopted":
+        pills.append(f'<span class="nw-pill law">{C.e(d["path"].stage_label)}</span>')
     elif d["outcome"] in ("failed", "vetoed", "withdrawn"):
         pills.append(f'<span class="nw-pill fail">{C.e(d["path"].stage_label)}</span>')
     elif d["session_current"]:
@@ -266,16 +270,19 @@ def bill_page(uid: str) -> None:
             f = facts["testimony_deadline_rule"]
             nxt += (f"<br><small>Testimony: {C.e(f['value'])} "
                     f"(as stated on the {C.link(f['url'], 'official schedule page')}, checked {C.e(fmt_relative(f['checked_at']))}).</small>")
+    elif d["outcome"] == "adopted" and path.constitutional:
+        nxt = ("This resolution proposes a change to the North Dakota Constitution. Both chambers approved it, so it "
+               "goes to the voters at a statewide election, usually the next general election. It does not go to the "
+               "Governor, and it takes effect only if voters approve it."
+               "<br><small>Ballot details come from the " + C.link("https://www.sos.nd.gov/elections/voter/ballot-measures", "Secretary of State")
+               + "; see also the Early Signals page.</small>")
     elif d["outcome"]:
         nxt = f"Nothing further: the process has ended ({C.e(path.stage_label.lower())})."
         if d["outcome"] == "became_law":
-            title = (d["title"] or "").lower()
-            nxt += "<br><small>When it takes effect: "
-            if "declare an emergency" in title:
-                nxt += "the title says it declares an emergency, which can make it take effect sooner. "
-            if "effective date" in title:
-                nxt += "the title says it sets its own effective date. "
-            nxt += "Confirm the exact date in the official " + C.link("https://ndlegis.gov/research-center/session-laws", "session laws") + ".</small>"
+            nxt += ("<br><small>When it takes effect: "
+                    + C.e(effective_date_note(d["title"], d["session_name"], path.emergency_clause))
+                    + " Confirm the exact date in the official "
+                    + C.link("https://ndlegis.gov/research-center/session-laws", "session laws") + ".</small>")
     else:
         nxt = ("No upcoming event has been officially announced. "
                "<small>Hearings are sometimes scheduled with short notice. Follow this bill to see it here as soon as one is listed.</small>")
@@ -317,9 +324,16 @@ def bill_page(uid: str) -> None:
         st.caption("Sponsoring a bill is not a vote. See Votes for how each legislator voted.")
 
     with st.expander(f"Legislative timeline ({len(d['actions'])} official actions)"):
+        rows = []
         for a in reversed(d["actions"]):
             when = fmt_date(a["date"], date_only=a["date_only"], with_weekday=False)
-            st.markdown(f"**{when}** · {a['chamber'] or ''}  \n{a['description']}")
+            plain = explain_action(a["description"], a["chamber"])
+            official = C.e(a["description"])
+            body = (f'{C.e(plain)}<div class="off">Official record: “{official}”</div>' if plain else official)
+            rows.append(f'<li><div class="when">{C.e(when)}{" · " + C.e(a["chamber"]) if a["chamber"] else ""}</div>'
+                        f'<div class="what">{body}</div></li>')
+        html('<ol class="nw-timeline" reversed>' + "".join(rows) + "</ol>")
+        st.caption("The plain-English lines are our wording of each official entry. The quoted text is the official record.")
         st.markdown(f"[Official actions page]({d['actions_url'] or d['url']})")
 
     with st.expander(f"Hearings ({len(d['hearings'])})"):
@@ -601,6 +615,27 @@ received and says so at the top of the page.
         "Bills can stop at any step. If the two chambers pass different versions, a **conference committee** may work out "
         "one version. The Governor can **veto** a bill, and the Legislature can override a veto with a two-thirds vote. "
         "Resolutions follow a different path and usually do not go to the Governor."
+    )
+    st.markdown(
+        """
+**What is different about North Dakota**
+
+- The Legislature meets in regular session once every two years, starting in January of odd-numbered years
+  (2025, 2027, ...). A session can last at most 80 days over the two years. Between sessions (the *interim*),
+  committees study topics and prepare bill drafts; the Early Signals page follows that work.
+- Every bill gets a public hearing in committee and a vote by the full House or Senate. A committee cannot
+  quietly stop a bill; it can only recommend "do pass" or "do not pass".
+- Around the middle of the session is **crossover**: most bills must pass the chamber where they started by
+  then, or they stop.
+- A bill needs yes votes from a majority of *all* elected members to pass (48 of 94 in the House, 24 of 47 in
+  the Senate), not only of those present.
+- Unless a bill says otherwise, a new law takes effect on August 1 after the session. A bill with an
+  **emergency clause** that passes by two-thirds takes effect as soon as it is filed.
+- A resolution that proposes changing the **state constitution** does not go to the Governor. If both
+  chambers adopt it, voters decide at a statewide election.
+- After a new law is filed, citizens can petition to **refer** it to a statewide vote. A successful petition
+  puts the law on hold until the vote.
+"""
     )
     st.markdown("### Words you will see")
     for term, meaning in GLOSSARY.items():

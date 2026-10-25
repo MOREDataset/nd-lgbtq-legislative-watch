@@ -115,5 +115,45 @@ The workflow wakes hourly; the program decides whether a full check is due:
 | Prefiling (a session starts within 90 days) | 120 min |
 | Off season | 12 h |
 
+North Dakota's calendar is also used as a floor, in case the official data
+publishes a new session late: January to April of odd-numbered years count as a
+session, and May of odd years and mid-November to December of even years count
+as prefiling. Special sessions are caught by the "actions in the last 21 days" rule.
+
 Change with `NDWATCH_POLL_*` variables. For 30-minute checks before hearings,
 change the cron line to `"17,47 * * * *"` and set `NDWATCH_POLL_ACTIVE_MIN=30`.
+
+## Before each new session (every other autumn)
+
+The next regular session (70th Legislative Assembly) starts in January 2027;
+prefiled bills and the organizational session come in December 2026.
+
+1. **Keep the previous session updating.** Set the Actions variable
+   `NDWATCH_EXTRA_ASSEMBLIES` to `69-2025`. Without it, the monitor switches to
+   the new assembly as soon as it is published. The 2025 bills stay on the
+   dashboard either way, but late changes to them (for example a referral) would
+   not be picked up.
+2. **Renew the cron-job.org token** if it expires before May. When it expires,
+   only GitHub's own schedule is left, which has been running about every 6 hours,
+   and the dashboard will show "Updates may be delayed" during the session.
+3. **Check the database size.** The health check prints `database_size_mb` and
+   fails (opening an issue) above 400 MB.
+
+## If the database fills up
+
+Neon's free tier is about 0.5 GB. Most of the space is bill text (every version
+of every bill) and individual votes. The monitor already deletes old bookkeeping
+(source checks older than 60 days and skipped runs older than 14 days). If the
+health check warns about size:
+
+- Remove an old assembly you no longer need from `NDWATCH_EXTRA_ASSEMBLIES`; or
+- move to Neon's paid tier (about $19/month); or
+- ask for a cleanup that keeps only the matched passages of non-relevant bills'
+  text (not built yet).
+
+## Changing database tables
+
+Tables are created automatically, but **existing tables are not changed**: if a
+future code change adds a column, the hosted database needs that column added
+by hand (or a migration tool). New tables are fine. The October 2026 review
+changes add no tables or columns.

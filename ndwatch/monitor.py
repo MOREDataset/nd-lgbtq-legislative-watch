@@ -13,7 +13,7 @@ import traceback
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.orm import Session as DbSession
 from sqlalchemy.orm import selectinload, sessionmaker
 
@@ -74,8 +74,33 @@ class CycleReport:
 # ---------------------------------------------------------------- policy
 
 
+def calendar_mode(today) -> str | None:
+    """What North Dakota's fixed calendar says, used as a floor under the data-based mode.
+
+    Regular sessions start in early January of odd-numbered years and end by early May
+    (80-day limit). Bills are prefiled from about mid-November of the even year, and the
+    organizational session is in early December. This keeps the monitor at session pace
+    even if the official data publishes the new session late. Special sessions can come
+    at any time; the data-based check (recent bill actions) covers those.
+    """
+    if today.year % 2 == 1 and 1 <= today.month <= 4:
+        return MODE_ACTIVE
+    if today.year % 2 == 1 and today.month == 5:
+        return MODE_PREFILING
+    if today.year % 2 == 0 and (today.month == 12 or (today.month == 11 and today.day >= 15)):
+        return MODE_PREFILING
+    return None
+
+
 def current_mode(db: DbSession, now: datetime | None = None) -> str:
     now = now or utcnow()
+    data_mode = _data_mode(db, now)
+    cal = calendar_mode(now.date())
+    rank = {MODE_ACTIVE: 0, MODE_PREFILING: 1, MODE_OFF: 2}
+    return min((m for m in (data_mode, cal) if m), key=lambda m: rank[m])
+
+
+def _data_mode(db: DbSession, now: datetime) -> str:
     today = now.date()
     sessions = db.scalars(select(Session)).all()
     latest_action = db.scalar(select(func.max(Bill.last_action_date)))
@@ -268,6 +293,19 @@ def _cycle_body(factory, api: LegislativeApi, fetcher: Fetcher, settings: Settin
         newest = list(db.scalars(select(Assembly.id).order_by(Assembly.number.desc()).limit(2)))
     collect_signals(factory, fetcher, settings, report, newest)
     log.info("step done: %s | %s", 'collect_signals', report.notes[-1] if report.notes else "")
+
+    # Housekeeping: never let it fail the run.
+    try:
+        with factory() as db:
+            checks, runs = prune_history(db)
+            size = database_size_mb(db)
+            db.commit()
+        if checks or runs:
+            report.notes.append(f"Housekeeping: removed {checks} old source checks and {runs} old skipped runs")
+        if size is not None:
+            report.notes.append(f"Database size: {size:.0f} MB")
+    except Exception as exc:  # pragma: no cover - defensive
+        log.warning("housekeeping failed: %s", exc)
 
 
 def _ingest_assembly(factory, api: LegislativeApi, settings: Settings, report: CycleReport, year: str) -> None:
@@ -596,6 +634,62 @@ def _collect_testimony(factory, fetcher: Fetcher, settings: Settings, report: Cy
             report.notes.append(f"Testimony: {checked} bill pages checked")
 
 
+def latest_checks(db: DbSession, ok_only: bool = False) -> dict[str, SourceCheck]:
+    """The most recent check of each source (or most recent successful one), in one query.
+
+    The table grows every hour, so this must not load the whole history.
+    """
+    inner = select(SourceCheck.source, func.max(SourceCheck.checked_at).label("at"))
+    if ok_only:
+        inner = inner.where(SourceCheck.ok.is_(True))
+    inner = inner.group_by(SourceCheck.source).subquery()
+    q = select(SourceCheck).join(
+        inner, (SourceCheck.source == inner.c.source) & (SourceCheck.checked_at == inner.c.at)
+    )
+    if ok_only:
+        q = q.where(SourceCheck.ok.is_(True))
+    out: dict[str, SourceCheck] = {}
+    for c in db.scalars(q.order_by(SourceCheck.id)):
+        out[c.source] = c  # if two checks share a timestamp, keep the later row
+    return out
+
+
+SOURCE_CHECK_RETENTION = timedelta(days=60)
+SKIPPED_RUN_RETENTION = timedelta(days=14)
+
+
+def prune_history(db: DbSession, now: datetime | None = None) -> tuple[int, int]:
+    """Delete old bookkeeping rows so the free database tier does not fill up.
+
+    Only monitoring bookkeeping is removed: source checks older than 60 days (always
+    keeping the latest check and latest success of every source) and "skipped" runs
+    older than 14 days. Bills, actions, votes, events and history are never deleted.
+    """
+    now = now or utcnow()
+    keep = {c.id for c in latest_checks(db).values()} | {c.id for c in latest_checks(db, ok_only=True).values()}
+    cutoff = now - SOURCE_CHECK_RETENTION
+    old_ids = [i for i in db.scalars(select(SourceCheck.id).where(SourceCheck.checked_at < cutoff)) if i not in keep]
+    for i in range(0, len(old_ids), 1000):
+        db.execute(delete(SourceCheck).where(SourceCheck.id.in_(old_ids[i : i + 1000])))
+    runs = db.execute(
+        delete(MonitorRun).where(MonitorRun.status == "skipped", MonitorRun.started_at < now - SKIPPED_RUN_RETENTION)
+    ).rowcount or 0
+    return len(old_ids), runs
+
+
+STORAGE_WARN_MB = 400  # Neon's free tier allows about 512 MB
+
+
+def database_size_mb(db: DbSession) -> float | None:
+    """Size of the hosted PostgreSQL database in MB, or None where it cannot be measured (SQLite)."""
+    if db.get_bind().dialect.name != "postgresql":
+        return None
+    try:
+        return float(db.scalar(text("SELECT pg_database_size(current_database())")) or 0) / 1_000_000
+    except Exception:
+        return None
+
+
 def monitor_health(db: DbSession, settings: Settings, now: datetime | None = None) -> dict:
     """Used by the dashboard and the health-check workflow."""
     now = now or utcnow()
@@ -604,16 +698,10 @@ def monitor_health(db: DbSession, settings: Settings, now: datetime | None = Non
     mode = current_mode(db, now)
     expected = interval_for(mode, settings)
     age_min = (now - last.started_at).total_seconds() / 60 if last else None
-    failing_sources = db.execute(
-        select(SourceCheck.source, func.max(SourceCheck.checked_at)).group_by(SourceCheck.source)
-    ).all()
-    latest_failures = []
-    for source, when in failing_sources:
-        row = db.scalars(
-            select(SourceCheck).where(SourceCheck.source == source, SourceCheck.checked_at == when).limit(1)
-        ).first()
-        if row and not row.ok:
-            latest_failures.append({"source": source, "error": row.error, "checked_at": row.checked_at})
+    latest_failures = [
+        {"source": c.source, "error": c.error, "checked_at": c.checked_at}
+        for c in latest_checks(db).values() if not c.ok
+    ]
     stale = age_min is None or age_min > max(settings.stale_after_minutes, expected * 2 + 30)
     return {
         "mode": mode,

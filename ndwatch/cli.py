@@ -48,12 +48,18 @@ def cmd_monitor(args, settings) -> int:
 
 
 def cmd_health(args, settings) -> int:
-    from ndwatch.monitor import monitor_health
+    from ndwatch.monitor import STORAGE_WARN_MB, database_size_mb, monitor_health
 
     factory = _factory(settings)
     with factory() as db:
         h = monitor_health(db, settings)
+        size = database_size_mb(db)
+    h["database_size_mb"] = round(size) if size is not None else None
     print(json.dumps(h, indent=2, default=str))
+    if size is not None and size > STORAGE_WARN_MB:
+        print(f"Database is {size:.0f} MB, close to the free-tier limit (about 512 MB). "
+              "See 'If the database fills up' in docs/DEPLOYMENT.md.", file=sys.stderr)
+        return 1
     if h["last_ok_run"] is None:
         print("No successful monitoring run recorded yet.", file=sys.stderr)
         return 1

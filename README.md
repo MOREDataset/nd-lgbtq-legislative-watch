@@ -19,10 +19,10 @@ testify, how legislators voted, and whether it became law.
 ## How it fits together
 
 ```
-GitHub Actions (hourly, :17)          PostgreSQL                 Streamlit Community Cloud
+GitHub Actions (hourly, :23)          PostgreSQL                 Streamlit Community Cloud
 python -m ndwatch monitor  ──write──►  bills, actions,  ◄──read──  streamlit_app.py
   1 discover assemblies/sessions       hearings, votes,            Overview · Bills · Hearings
-  2 read official JSON API             testimony, events,          Recent Activity · Following
+  2 read official JSON API             testimony, events,          Early Signals · Activity · Following
   3 compare, record changes            source checks               About & Sources · Reviewer
   4 read bill text, testimony pages
   5 relevance detection
@@ -65,7 +65,7 @@ Settings are environment variables; see `.env.example`.
 ## Tests
 
 ```bash
-pytest          # 52 tests, no network needed
+pytest          # 94 tests, no network needed
 ruff check .
 ```
 
@@ -123,7 +123,12 @@ measures. Advocacy trackers are used only as a cross-check on the Reviewer page.
 - Committee recommendations are never shown as votes; sponsors are never
   assumed to have voted a certain way.
 - A hearing is never treated as a vote date.
-- Passing one chamber is never shown as becoming law.
+- Passing one chamber is never shown as becoming law, and a veto counts as
+  overridden only when both chambers vote to override.
+- A resolution that amends the state constitution is shown as going to the
+  voters, not as law.
+- Each official action is shown word for word, with our plain-English reading
+  next to it and labeled as ours.
 - Official text, our plain-language explanations, reviewer notes and any AI
   text are labeled separately.
 - Content from official pages is treated as untrusted input: it is escaped

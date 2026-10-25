@@ -22,13 +22,12 @@ from ndwatch.db.schema import (
     ReviewDecision,
     RollCall,
     Session,
-    SourceCheck,
     SourceFact,
     Summary,
     Testimony,
     TestimonyCheck,
 )
-from ndwatch.monitor import monitor_health
+from ndwatch.monitor import latest_checks, monitor_health
 from ndwatch.process import build_path, outcome_label
 from ndwatch.relevance.detector import default_rules
 from ndwatch.timeutil import utcnow
@@ -174,12 +173,8 @@ def facts(db: DbSession) -> dict[str, dict]:
 
 def health(db: DbSession, settings: Settings) -> dict:
     h = monitor_health(db, settings)
-    latest: dict[str, SourceCheck] = {}
-    for c in db.scalars(select(SourceCheck).order_by(SourceCheck.checked_at)):
-        latest[c.source] = c
-    ok_latest: dict[str, SourceCheck] = {}
-    for c in db.scalars(select(SourceCheck).where(SourceCheck.ok.is_(True)).order_by(SourceCheck.checked_at)):
-        ok_latest[c.source] = c
+    latest = latest_checks(db)
+    ok_latest = latest_checks(db, ok_only=True)
     h["sources"] = [
         {"source": k, "url": v.url, "checked_at": v.checked_at, "ok": v.ok, "error": v.error,
          "last_ok": ok_latest[k].checked_at if k in ok_latest else None,

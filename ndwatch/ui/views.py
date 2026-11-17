@@ -28,7 +28,10 @@ from ndwatch.ui.storage import previous_visit, toggle_follow
 
 
 def html(s: str) -> None:
-    st.html(s)
+    # st.html refuses an empty string (it raised an error on pages of bills with no
+    # matched wording, i.e. most bills opened from "show all bills").
+    if s and s.strip():
+        st.html(s)
 
 
 # ------------------------------------------------------------------ shared

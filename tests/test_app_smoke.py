@@ -75,7 +75,7 @@ def test_page_renders(db_url, monkeypatch, page):
     assert not at.exception, at.exception
 
 
-@pytest.mark.parametrize("bill", ["202501:HB1144", "202501:HB1430", "202501:HB1217", "202501:NOPE1"])
+@pytest.mark.parametrize("bill", ["202501:HB1144", "202501:HB1430", "202501:HB1217", "202501:HB1001", "202501:NOPE1"])
 def test_bill_page_renders(db_url, monkeypatch, bill):
     monkeypatch.setenv("DATABASE_URL", db_url)
     at = st_testing.AppTest.from_function(_render, args=("bills", bill), default_timeout=60)

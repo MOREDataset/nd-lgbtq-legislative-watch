@@ -258,3 +258,28 @@ def test_repeat_run_does_not_download_bill_text(factory, settings):
     with factory() as db:
         rel = {x.bill_uid: x for x in db.scalars(select(Relevance))}
     assert rel["209701:HB9002"].status == "relevant"  # text-based result kept
+
+
+def test_long_source_names_fit_the_database_column():
+    """REAL failure (Nov 2026, PostgreSQL): the interim committee
+    'artificial-intelligence-and-data-center-committee' made a 67-character source
+    name; the column holds 60. SQLite does not enforce lengths, so check directly."""
+    from ndwatch.db.schema import SourceCheck, source_key
+
+    limit = SourceCheck.__table__.c.source.type.length
+    long = "interim:69-2025:artificial-intelligence-and-data-center-committee"
+    assert len(long) > limit
+    k = source_key(long)
+    assert len(k) <= limit and k == source_key(long)  # stable
+    assert k != source_key(long.replace("data", "date"))  # distinct
+    assert source_key("bills:69-2025") == "bills:69-2025"
+
+
+def test_overlong_official_text_is_trimmed_not_rejected(factory):
+    with factory() as db:
+        now = utcnow()
+        row = SourceFact(key="k", value="v", source_url="https://x/" + "a" * 600, checked_at=now, first_seen_at=now)
+        db.add(row)
+        db.commit()
+        limit = SourceFact.__table__.c.source_url.type.length
+        assert len(row.source_url) == limit and row.source_url.endswith("…")

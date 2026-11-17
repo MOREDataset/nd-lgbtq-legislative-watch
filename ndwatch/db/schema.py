@@ -16,6 +16,7 @@ Design notes
 
 from __future__ import annotations
 
+import hashlib
 from datetime import date, datetime
 
 from sqlalchemy import (
@@ -29,6 +30,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -418,3 +420,29 @@ class Signal(Base):
 
 
 Index("ix_events_feed", Event.importance, Event.detected_at)
+
+
+SOURCE_KEY_MAX = 60  # length of SourceCheck.source
+
+
+def source_key(name: str) -> str:
+    """Source names longer than the database column (e.g. long interim committee
+    names) are shortened with a stable hash so PostgreSQL accepts them."""
+    if len(name) <= SOURCE_KEY_MAX:
+        return name
+    return name[: SOURCE_KEY_MAX - 9] + "~" + hashlib.sha1(name.encode()).hexdigest()[:8]
+
+
+@event.listens_for(Base, "before_insert", propagate=True)
+@event.listens_for(Base, "before_update", propagate=True)
+def _fit_text_to_columns(mapper, connection, target) -> None:
+    """PostgreSQL rejects text longer than a column allows (SQLite does not, so tests
+    can miss it). One overlong official value must not fail a whole monitoring step,
+    so ordinary text columns are trimmed to fit. Key columns are left alone."""
+    for col in mapper.columns:
+        length = getattr(col.type, "length", None)
+        if not length or col.primary_key or col.unique:
+            continue
+        value = getattr(target, col.key, None)
+        if isinstance(value, str) and len(value) > length:
+            setattr(target, col.key, value[: length - 1] + "…")

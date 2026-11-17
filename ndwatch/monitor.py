@@ -31,6 +31,7 @@ from ndwatch.db.schema import (
     SourceFact,
     Testimony,
     TestimonyCheck,
+    source_key,
 )
 from ndwatch.events import HIGH, LOW
 from ndwatch.ingest import (
@@ -151,13 +152,13 @@ def _record_check(
     source_last_updated: datetime | None = None,
 ) -> SourceCheck:
     prev = db.scalars(
-        select(SourceCheck).where(SourceCheck.source == source, SourceCheck.ok.is_(True))
+        select(SourceCheck).where(SourceCheck.source == source_key(source), SourceCheck.ok.is_(True))
         .order_by(SourceCheck.checked_at.desc()).limit(1)
     ).first()
     sha = fetch.sha256 if fetch.ok else None
     ok = fetch.ok and error is None
     check = SourceCheck(
-        run_id=run_id, source=source, url=fetch.url, checked_at=fetch.fetched_at.replace(tzinfo=None),
+        run_id=run_id, source=source_key(source), url=fetch.url, checked_at=fetch.fetched_at.replace(tzinfo=None),
         ok=ok, http_status=fetch.status, error=error or fetch.error,
         source_last_updated=local_to_utc(source_last_updated), content_sha256=sha,
         changed=None if not ok else (prev is None or prev.content_sha256 != sha),
@@ -168,7 +169,7 @@ def _record_check(
 
 def _unchanged_since_last_ok(db: DbSession, source: str, sha: str) -> bool:
     prev = db.scalars(
-        select(SourceCheck).where(SourceCheck.source == source, SourceCheck.ok.is_(True))
+        select(SourceCheck).where(SourceCheck.source == source_key(source), SourceCheck.ok.is_(True))
         .order_by(SourceCheck.checked_at.desc()).limit(1)
     ).first()
     return prev is not None and prev.content_sha256 == sha
@@ -176,7 +177,7 @@ def _unchanged_since_last_ok(db: DbSession, source: str, sha: str) -> bool:
 
 def _last_ok_check(db: DbSession, source: str) -> SourceCheck | None:
     return db.scalars(
-        select(SourceCheck).where(SourceCheck.source == source, SourceCheck.ok.is_(True))
+        select(SourceCheck).where(SourceCheck.source == source_key(source), SourceCheck.ok.is_(True))
         .order_by(SourceCheck.checked_at.desc()).limit(1)
     ).first()
 
@@ -416,7 +417,7 @@ def _ingest_assembly(factory, api: LegislativeApi, settings: Settings, report: C
 def _unchanged_since_last_ok_before(db: DbSession, source: str, fetch: FetchResult) -> bool:
     """Like _unchanged_since_last_ok, but ignores the check we just added in this session."""
     rows = db.scalars(
-        select(SourceCheck).where(SourceCheck.source == source, SourceCheck.ok.is_(True))
+        select(SourceCheck).where(SourceCheck.source == source_key(source), SourceCheck.ok.is_(True))
         .order_by(SourceCheck.checked_at.desc()).limit(2)
     ).all()
     return len(rows) == 2 and rows[1].content_sha256 == fetch.sha256

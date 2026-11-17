@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
 from ndwatch.config import Settings
-from ndwatch.db.schema import Bill, Relevance, ReviewDecision, Signal, SourceCheck
+from ndwatch.db.schema import Bill, Relevance, ReviewDecision, Signal, SourceCheck, source_key
 from ndwatch.events import LOW, MEDIUM
 from ndwatch.ingest import EventSpec, EventWriter
 from ndwatch.relevance.detector import NOT_RELEVANT, POSSIBLE, RELEVANT, classify, default_rules
@@ -70,7 +70,7 @@ def _slug(url: str) -> str:
 
 def _last_ok(db: DbSession, source: str) -> SourceCheck | None:
     return db.scalars(
-        select(SourceCheck).where(SourceCheck.source == source, SourceCheck.ok.is_(True))
+        select(SourceCheck).where(SourceCheck.source == source_key(source), SourceCheck.ok.is_(True))
         .order_by(SourceCheck.checked_at.desc()).limit(1)
     ).first()
 

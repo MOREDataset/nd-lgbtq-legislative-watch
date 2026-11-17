@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime, time
 
-from sqlalchemy import insert, select
+from sqlalchemy import insert, select, update
 from sqlalchemy.orm import Session as DbSession
 
 from ndwatch.db.schema import (
@@ -40,7 +41,7 @@ from ndwatch.sources.api_models import (
     ApiRollCall,
     ApiSession,
 )
-from ndwatch.timeutil import fmt_date, is_date_only, local_to_utc, utcnow
+from ndwatch.timeutil import fmt_date, is_date_only, local_to_utc, utc_to_local, utcnow
 
 
 def bill_uid(session_id: str, name: str) -> str:
@@ -292,12 +293,74 @@ def _sync_sponsors(db: DbSession, bill: Bill, api: ApiBill) -> None:
         )
 
 
+_STATED_DATE = re.compile(r"\b(\d{1,2})/(\d{1,2})\s*$")
+
+
+def stated_action_date(description: str | None, recorded: datetime | None) -> datetime | None:
+    """The real date of an action whose official text ends with one, else None.
+
+    Some official actions are entered days or weeks after they happen, and the real
+    date is written at the end of the text: "Signed by Governor 05/01" was recorded
+    on 05/02, and "Filed with Secretary Of State 05/02" on 06/11 (HB 1144, 2025).
+    `recorded` is the official (Central time, naive) date. Returns a naive Central
+    date-only value (23:59:59), the same convention the official data uses.
+    """
+    if not description or recorded is None:
+        return None
+    m = _STATED_DATE.search(description)
+    if not m:
+        return None
+    month, day = int(m.group(1)), int(m.group(2))
+    rec = recorded.date()
+    for year in (rec.year, rec.year - 1, rec.year + 1):
+        try:
+            d = date(year, month, day)
+        except ValueError:
+            continue
+        if abs((rec - d).days) <= 120:  # never more than a few months apart
+            return datetime.combine(d, time(23, 59, 59))
+    return None
+
+
+def repair_stated_action_dates(db: DbSession) -> int:
+    """Fix stored actions (and their feed entries) that show the recording date
+    instead of the date written in the official text. Safe to run repeatedly."""
+    fixed = 0
+    touched: set[str] = set()
+    rows = db.scalars(select(BillAction).where(BillAction.description.like("%/%"))).all()
+    for row in rows:
+        if row.date is None:
+            continue
+        stated = stated_action_date(row.description, utc_to_local(row.date).replace(tzinfo=None))
+        if stated is None:
+            continue
+        when = local_to_utc(stated)
+        if row.date == when and row.date_only:
+            continue
+        row.date, row.date_only = when, True
+        db.execute(
+            update(Event).where(Event.dedupe_key == f"{row.bill_uid}:action:{row.action_id}")
+            .values(event_date=when, event_date_only=True)
+        )
+        touched.add(row.bill_uid)
+        fixed += 1
+    for uid in touched:
+        bill = db.get(Bill, uid)
+        bill.last_action_date = max((r.date for r in bill.actions if r.date), default=None)
+        db.execute(
+            update(Event).where(Event.bill_uid == uid, Event.dedupe_key.like(f"{uid}:outcome:%"))
+            .values(event_date=bill.last_action_date, event_date_only=True)
+        )
+    return fixed
+
+
 def _sync_actions(db: DbSession, bill: Bill, api: ApiBill, writer: EventWriter, now: datetime) -> None:
     existing = {a.action_id: a for a in bill.actions}
     for pos, a in enumerate(api.actions):
         row = existing.get(a.id)
-        date_only = is_date_only(a.date)
-        when = local_to_utc(a.date)
+        src = stated_action_date(a.description, a.date) or a.date
+        date_only = is_date_only(src)
+        when = local_to_utc(src)
         rc = a.roll_call
         if row is None:
             row = BillAction(action_id=a.id, first_seen_at=now, description=a.description, position=pos)

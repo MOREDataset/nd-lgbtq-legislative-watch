@@ -37,4 +37,12 @@ if settings().admin_password:
     pages["review"] = st.Page(review, title="Reviewer", url_path="review")
 st.session_state["_pages"] = pages
 
-st.navigation(list(pages.values()), position="top").run()
+from sqlalchemy.exc import DBAPIError  # noqa: E402
+
+try:
+    st.navigation(list(pages.values()), position="top").run()
+except DBAPIError:
+    # The database could not be reached (for example, the free hosting plan paused it).
+    # Show a plain explanation instead of a technical error page.
+    views.database_unavailable()
+

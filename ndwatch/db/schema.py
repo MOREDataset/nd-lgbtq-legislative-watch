@@ -160,7 +160,9 @@ class BillVersion(Base):
     document_url: Mapped[str | None] = mapped_column(String(300))
     first_seen_at: Mapped[datetime] = mapped_column(DateTime)
     # Extracted text of the official PDF (fetched once; versions do not change).
-    text: Mapped[str | None] = mapped_column(Text)
+    # Deferred: only loaded when code actually reads it. Loading every bill's full
+    # text on each run used up the free database's monthly data-transfer quota.
+    text: Mapped[str | None] = mapped_column(Text, deferred=True)
     text_status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|ok|failed|skipped
     text_sha256: Mapped[str | None] = mapped_column(String(64))
     text_fetched_at: Mapped[datetime | None] = mapped_column(DateTime)

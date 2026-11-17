@@ -36,6 +36,7 @@ from ndwatch.events import HIGH, LOW
 from ndwatch.ingest import (
     EventSpec,
     EventWriter,
+    repair_stated_action_dates,
     upsert_assembly,
     upsert_bill,
     upsert_members,
@@ -299,7 +300,10 @@ def _cycle_body(factory, api: LegislativeApi, fetcher: Fetcher, settings: Settin
         with factory() as db:
             checks, runs = prune_history(db)
             size = database_size_mb(db)
+            dates_fixed = repair_stated_action_dates(db)
             db.commit()
+        if dates_fixed:
+            report.notes.append(f"Corrected {dates_fixed} action dates to the date written in the official record")
         if checks or runs:
             report.notes.append(f"Housekeeping: removed {checks} old source checks and {runs} old skipped runs")
         if size is not None:
@@ -504,12 +508,21 @@ def _update_relevance(factory, report: CycleReport) -> None:
     rules = default_rules()
     with factory() as db:
         writer = EventWriter(db, report.run_id)
-        bills = db.scalars(select(Bill).options(selectinload(Bill.versions))).all()
+        bills = db.scalars(select(Bill)).all()
         existing = {r.bill_uid: r for r in db.scalars(select(Relevance))}
+        # Which versions have readable text, found without downloading the text itself.
+        # (Reading every bill's full text on every run used up the hosted database's
+        # monthly data-transfer allowance; now text is read only for bills that changed.)
+        has_text = (BillVersion.text.is_not(None)) & (BillVersion.text != "")
+        used_by_bill: dict[str, list[str]] = {}
+        for uid, lc in db.execute(
+            select(BillVersion.bill_uid, BillVersion.lc_number)
+            .where(BillVersion.text_status == "ok", has_text)
+        ):
+            used_by_bill.setdefault(uid, []).append(lc)
         updated = newly = 0
         for bill in bills:
-            ok_versions = [v for v in bill.versions if v.text_status == "ok" and v.text]
-            used = sorted(v.lc_number for v in ok_versions)
+            used = sorted(used_by_bill.get(bill.uid, []))
             cur = existing.get(bill.uid)
             if (
                 cur is not None
@@ -518,10 +531,15 @@ def _update_relevance(factory, report: CycleReport) -> None:
                 and cur.computed_at >= bill.last_changed_at
             ):
                 continue
+            texts = [] if not used else list(db.execute(
+                select(BillVersion.lc_number, BillVersion.text, BillVersion.document_url)
+                .where(BillVersion.bill_uid == bill.uid, BillVersion.text_status == "ok", has_text)
+                .order_by(BillVersion.position)
+            ))
             result = classify(
                 title=bill.title,
                 summary=bill.summary,
-                texts=[(v.lc_number, v.text, v.document_url) for v in ok_versions],
+                texts=[tuple(t) for t in texts],
                 rules=rules,
             )
             was = cur.status if cur else None

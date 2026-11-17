@@ -34,6 +34,21 @@ def html(s: str) -> None:
 # ------------------------------------------------------------------ shared
 
 
+def database_unavailable() -> None:
+    """Shown when the app's database cannot be reached at all."""
+    st.markdown("## North Dakota LGBTQ+ Legislative Watch")
+    st.warning(
+        "**This dashboard's stored information is temporarily unavailable.** "
+        "The database it reads from could not be reached just now. Nothing here is lost; "
+        "please try again later."
+    )
+    st.markdown(
+        "In the meantime, the official source for every bill, hearing and vote is the "
+        "North Dakota Legislative Branch website: "
+        "[ndlegis.gov](https://ndlegis.gov)."
+    )
+
+
 def header() -> dict:
     h = cached("health", lambda db: D.health(db, settings()))
     html(C.masthead())

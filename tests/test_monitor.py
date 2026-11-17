@@ -227,3 +227,34 @@ def test_backlog_of_bill_text_keeps_hourly_pace(factory, settings):
     with factory() as db:
         _, _, minutes = is_due(db, s)
     assert minutes == s.polling.active_session
+
+
+def test_repeat_run_does_not_download_bill_text(factory, settings):
+    """Full bill text is large. A run with nothing new must not read it back from the
+    database (doing so on every run used up the hosted database's monthly quota)."""
+    import re
+
+    from sqlalchemy import event
+
+    run_cycle(factory, DictFetcher(responses(syn.bills(*base_bills()))), settings, force=True)
+    engine = factory.kw["bind"]
+    selected_text: list[str] = []
+
+    def spy(conn, cursor, statement, params, context, executemany):
+        head = statement.split("FROM")[0]
+        if re.search(r"bill_versions\.text\b(?!_)", head):
+            selected_text.append(statement)
+
+    event.listen(engine, "before_cursor_execute", spy)
+    try:
+        changed = base_bills()
+        changed[2]["title"] = changed[2]["title"] + " (amended)"  # touch only the unrelated bill
+        r = run_cycle(factory, DictFetcher(responses(syn.bills(*changed))), settings, force=True)
+    finally:
+        event.remove(engine, "before_cursor_execute", spy)
+    assert r.status == "ok", r.errors
+    # At most the one changed bill's text may be read, never everyone's.
+    assert all("bill_uid =" in s or "bill_uid = " in s for s in selected_text), selected_text
+    with factory() as db:
+        rel = {x.bill_uid: x for x in db.scalars(select(Relevance))}
+    assert rel["209701:HB9002"].status == "relevant"  # text-based result kept

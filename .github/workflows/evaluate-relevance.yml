@@ -24,7 +24,7 @@ jobs:
     outputs:
       assemblies: ${{ steps.read.outputs.assemblies }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: read
         run: echo "assemblies=$(grep -v '^#' .github/evaluate-request.txt | grep -v '^ *$' | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
 
@@ -42,8 +42,8 @@ jobs:
       NDWATCH_MAX_PDFS_PER_RUN: "100000"
       NDWATCH_MAX_TESTIMONY_PAGES_PER_RUN: "0"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install -e .

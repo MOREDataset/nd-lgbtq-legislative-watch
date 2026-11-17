@@ -99,3 +99,24 @@ def test_early_signals_page_shows_items_escaped(db_url, monkeypatch):
     html = " ".join(str(getattr(el, "proto", "")) for el in at.main)
     assert "gender identity &lt;b&gt;in&lt;/b&gt;" in html  # page text is escaped, never rendered as HTML
     assert "Example Agency" in html
+
+
+def test_unreachable_database_shows_plain_message(monkeypatch, tmp_path):
+    """If the hosted database is down, visitors get a short explanation, not a traceback."""
+    from ndwatch.ui import runtime
+
+    # A folder is not a database file, so connecting fails like an unreachable server would.
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}")
+    runtime.settings.clear()
+    runtime._factory.clear()
+    runtime.clear_cache()
+    try:
+        at = st_testing.AppTest.from_file(str(ROOT / "streamlit_app.py"), default_timeout=60)
+        at.run()
+    finally:
+        runtime.settings.clear()
+        runtime._factory.clear()
+        runtime.clear_cache()
+    runtime.clear_cache()
+    assert not at.exception, at.exception
+    assert any("temporarily unavailable" in w.value for w in at.warning)

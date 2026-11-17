@@ -151,9 +151,28 @@ health check warns about size:
 - ask for a cleanup that keeps only the matched passages of non-relevant bills'
   text (not built yet).
 
+## If the database says "exceeded the quota"
+
+Free database plans also limit how much **data is read out** and how many **hours
+the database is awake** each month, not only how much is stored. If monitoring
+runs fail with `Your account or project has exceeded the quota`, the database
+provider has paused it until the monthly allowance resets (the dashboard then
+shows a short "temporarily unavailable" notice instead of bills).
+
+1. In the Neon console, open the project's **Usage** (or **Billing**) page to see
+   which limit was reached and when it resets.
+2. Nothing is lost: once it resets, the next hourly run catches up automatically.
+3. In November 2026 this happened because every check re-read the full text of
+   all ~3,800 bill versions (about 38 MB) up to three times. Since the November
+   2026 fix, text is read only for bills that actually changed.
+4. If it happens again, the options are a paid plan (about $19/month) or fewer
+   checks outside the session (set `NDWATCH_POLL_PREFILING_MIN` / `NDWATCH_POLL_OFFSEASON_MIN`
+   higher, and have cron-job.org call every 2 hours instead of every hour).
+
 ## Changing database tables
 
 Tables are created automatically, but **existing tables are not changed**: if a
 future code change adds a column, the hosted database needs that column added
 by hand (or a migration tool). New tables are fine. The October 2026 review
-changes add no tables or columns.
+changes add no tables or columns. The November 2026 fixes add none either (making
+bill text load on demand does not change the table).

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -151,3 +152,52 @@ def test_rerun_creates_no_duplicates(loaded):
     with factory() as db:
         assert db.scalar(select(func.count()).select_from(Event)) == before
         assert db.scalar(select(func.count()).select_from(Hearing)) == hearings
+
+
+def test_governor_and_filing_dates_use_the_date_in_the_official_text(loaded):
+    """REAL HB 1144 (2025): the official actions page lists "Signed by Governor 05/01"
+    on the row dated 05/02, and "Filed with Secretary Of State 05/02" on the row dated
+    06/11. The app must show May 1 and May 2, not the later recording dates."""
+    factory, _, _ = loaded
+    with factory() as db:
+        bill = db.get(Bill, "202501:HB1144")
+        by_text = {a.description: a for a in bill.actions}
+        signed = by_text["Signed by Governor 05/01"]
+        filed = by_text["Filed with Secretary Of State 05/02"]
+        assert fmt_date(signed.date, date_only=True, with_weekday=False) == "May 1, 2025"
+        assert fmt_date(filed.date, date_only=True, with_weekday=False) == "May 2, 2025"
+        assert signed.date_only and filed.date_only
+        assert fmt_date(bill.last_action_date, date_only=True, with_weekday=False) == "May 2, 2025"
+        ev = db.scalars(select(Event).where(Event.dedupe_key == "202501:HB1144:outcome:became_law")).one()
+        assert fmt_date(ev.event_date, date_only=True, with_weekday=False) == "May 2, 2025"
+
+
+def test_repair_fixes_dates_stored_by_older_versions(loaded):
+    from ndwatch.db.schema import BillAction
+    from ndwatch.ingest import repair_stated_action_dates
+    from ndwatch.timeutil import local_to_utc
+
+    factory, _, _ = loaded
+    with factory() as db:
+        row = db.scalars(select(BillAction).where(
+            BillAction.bill_uid == "202501:HB1144",
+            BillAction.description == "Filed with Secretary Of State 05/02")).one()
+        good = row.date
+        row.date = local_to_utc(datetime(2025, 6, 11, 9, 46, 3))  # what older versions stored
+        row.date_only = False
+        db.flush()
+        assert repair_stated_action_dates(db) == 1
+        assert row.date == good and row.date_only
+        assert repair_stated_action_dates(db) == 0  # nothing left to fix
+        db.rollback()
+
+
+def test_stated_action_date_rules():
+    from ndwatch.ingest import stated_action_date
+
+    rec = datetime(2025, 6, 11, 9, 46)
+    assert stated_action_date("Filed with Secretary Of State 05/02", rec) == datetime(2025, 5, 2, 23, 59, 59)
+    # Signed in late December, recorded in January.
+    assert stated_action_date("Signed by Governor 12/30", datetime(2027, 1, 3)) == datetime(2026, 12, 30, 23, 59, 59)
+    assert stated_action_date("Second reading, passed, yeas 75 nays 14", rec) is None
+    assert stated_action_date("Signed by Governor 02/30", rec) is None

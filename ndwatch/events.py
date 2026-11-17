@@ -58,11 +58,35 @@ def describe_action(
         return ActionEvent("filed", MEDIUM, f"{bill} was filed with the Secretary of State (the final official step).")
     if "withdrawn" in low:
         return ActionEvent("withdrawn", HIGH, f"{bill} was withdrawn.")
+    if "passed over veto" in low:
+        # North Dakota's wording when ONE chamber votes to override; both must do so.
+        return ActionEvent(
+            "override_vote", HIGH,
+            f"{where_cap} voted to override the Governor's veto of {bill}{tally}. "
+            "The veto is overridden only if both chambers do this.",
+        )
     if "second reading" in low and "failed" in low:
-        return ActionEvent("floor_failed", HIGH, f"{where_cap} voted on {bill}: it did not pass{tally}.")
+        verb = "it was not adopted" if "adopt" in low else "it did not pass"
+        return ActionEvent("floor_failed", HIGH, f"{where_cap} voted on {bill}: {verb}{tally}.")
     if "second reading" in low and "passed" in low:
         amended = " with changes (amended)" if "amended" in low else ""
         return ActionEvent("floor_passed", HIGH, f"{where_cap} voted to pass {bill}{amended}{tally}.")
+    if "second reading" in low and "adopted" in low:
+        # Resolutions are "adopted" rather than "passed".
+        amended = " with changes (amended)" if "amended" in low else ""
+        return ActionEvent("floor_passed", HIGH, f"{where_cap} voted to adopt {bill}{amended}{tally}.")
+    if "conference committee report rejected" in low:
+        return ActionEvent(
+            "conference_rejected", MEDIUM, f"{where_cap} rejected the conference committee's version of {bill}."
+        )
+    if "emergency clause failed" in low:
+        return ActionEvent(
+            "emergency_failed", MEDIUM,
+            f"The emergency clause of {bill} did not get the two-thirds vote it needs in {where}, "
+            "so it would not take effect immediately.",
+        )
+    if re.fullmatch(r"reconsidered", low):
+        return ActionEvent("reconsidered", MEDIUM, f"{where_cap} voted to reconsider its earlier vote on {bill}.")
     if "refused to concur" in low:
         return ActionEvent(
             "refused_concur", MEDIUM, f"{where_cap} did not agree to the other chamber's changes to {bill}."
@@ -76,6 +100,13 @@ def describe_action(
         return ActionEvent("conference_adopted", HIGH, f"{where_cap} accepted the conference committee's version of {bill}.")
     if re.search(r"\bconcurred\b", low):
         return ActionEvent("concurred", HIGH, f"{where_cap} agreed to the other chamber's changes to {bill}.")
+    if "without recommendation" in low:
+        changes = " with changes" if "amend" in low else ""
+        return ActionEvent(
+            "committee_no_recommendation", MEDIUM,
+            f"A {chamber or ''} committee sent {bill}{changes} to the full {chamber or 'chamber'} "
+            "without recommending for or against it.".replace("A  ", "A "),
+        )
     if re.search(r"do not pass", low):
         return ActionEvent(
             "committee_do_not_pass", MEDIUM,

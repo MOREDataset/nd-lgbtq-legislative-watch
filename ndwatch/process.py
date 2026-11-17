@@ -175,6 +175,7 @@ def build_path(
             s.note = note
 
     overridden_in: set[str] = set()
+    divisions: dict[str, bool] = {}
     for a in ordered:
         d = (a.description or "").strip()
         ch = a.chamber
@@ -190,6 +191,15 @@ def build_path(
             path.conference = True
         if _RX["amend"].search(d):
             path.amended = True
+        # A bill can be divided into parts ("Division of bill") that are voted on
+        # separately. If every part loses, the bill has failed.
+        div = re.match(r"division ([a-z]) (lost|passed|adopted)\b", d, re.I)
+        if div:
+            divisions[div.group(1).upper()] = div.group(2).lower() != "lost"
+            if not any(divisions.values()) and len(divisions) >= 2:
+                mark("floor_2" if in_second else "floor_1", FAILED, a.date, note="Every division of the bill lost")
+                path.outcome = OUTCOME_FAILED
+            continue
 
         if _RX["intro"].search(d) and not in_second:
             mark("introduced", DONE, a.date)

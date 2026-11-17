@@ -39,10 +39,26 @@ st.session_state["_pages"] = pages
 
 from sqlalchemy.exc import DBAPIError  # noqa: E402
 
+
+def _database_unavailable() -> None:
+    # Kept in this file (not in ndwatch/) so it works even if Streamlit Cloud is
+    # still running an older copy of the other modules right after an update.
+    st.markdown("## North Dakota LGBTQ+ Legislative Watch")
+    st.warning(
+        "**This dashboard's stored information is temporarily unavailable.** "
+        "The database it reads from could not be reached just now. Nothing here is lost; "
+        "please try again later."
+    )
+    st.markdown(
+        "In the meantime, the official source for every bill, hearing and vote is the "
+        "North Dakota Legislative Branch website: [ndlegis.gov](https://ndlegis.gov)."
+    )
+
+
 try:
     st.navigation(list(pages.values()), position="top").run()
 except DBAPIError:
     # The database could not be reached (for example, the free hosting plan paused it).
     # Show a plain explanation instead of a technical error page.
-    views.database_unavailable()
+    _database_unavailable()
 

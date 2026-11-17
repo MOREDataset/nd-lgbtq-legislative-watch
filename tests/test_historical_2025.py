@@ -201,3 +201,15 @@ def test_stated_action_date_rules():
     assert stated_action_date("Signed by Governor 12/30", datetime(2027, 1, 3)) == datetime(2026, 12, 30, 23, 59, 59)
     assert stated_action_date("Second reading, passed, yeas 75 nays 14", rec) is None
     assert stated_action_date("Signed by Governor 02/30", rec) is None
+
+
+def test_duplicate_official_meeting_listed_once(loaded):
+    """REAL HB 1144 (2025): the official data lists the Feb 3 work session twice
+    (ids 41003 and 41004). Visitors should see it once."""
+    factory, _, _ = loaded
+    with factory() as db:
+        feb3 = [e for e in db.scalars(select(Event).where(Event.bill_uid == "202501:HB1144"))
+                if "work session" in e.title and "Feb 3, 2025" in e.title]
+        assert len(feb3) == 1
+        detail = D.bill_detail(db, "202501:HB1144")
+        assert sum(1 for h in detail["hearings"] if h["when"] and "Feb 3, 2025" in fmt_date(h["when"])) == 1

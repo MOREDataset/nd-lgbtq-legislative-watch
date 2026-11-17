@@ -129,12 +129,19 @@ def feed(db: DbSession, uids: set[str] | None = None, limit: int = 200, min_impo
         q = q.where(Event.detected_at >= since)
     rows = db.execute(q).all()
     items = []
+    seen_meetings: set[tuple] = set()
     for e, name, summary in rows:
         # "Flagged by our matcher" is not legislative news for a bill that has already finished.
         if e.kind == "flagged_relevant" and e.backfill:
             continue
         if e.kind.startswith("signal_") and e.backfill:
             continue
+        # A meeting the official data lists twice was announced twice by older versions.
+        if e.kind in ("hearing_scheduled", "work_session_scheduled"):
+            twin = (e.bill_uid, e.title, e.event_date)
+            if twin in seen_meetings:
+                continue
+            seen_meetings.add(twin)
         items.append({
             "id": e.id, "uid": e.bill_uid, "bill": name, "bill_summary": summary, "kind": e.kind,
             "importance": e.importance, "title": e.title, "detail": e.detail, "event_date": e.event_date,
@@ -157,7 +164,13 @@ def upcoming_hearings(db: DbSession, uids: set[str] | None, days: int = 60) -> l
     if uids is not None:
         q = q.where(Hearing.bill_uid.in_(uids))
     out = []
+    seen: set[tuple] = set()
     for h, name, summary, hurl, turl, burl in db.execute(q).all():
+        # The official data sometimes lists the same meeting twice under two ids.
+        key = (h.bill_uid, h.starts_at, h.committee_id, h.type)
+        if key in seen:
+            continue
+        seen.add(key)
         out.append({
             "uid": h.bill_uid, "bill": name, "summary": summary, "when": h.starts_at, "type": h.type,
             "public": (h.type or "").lower() == "bill hearing", "committee": h.committee_name, "room": h.room,
@@ -212,12 +225,18 @@ def bill_detail(db: DbSession, uid: str) -> dict | None:
     ]
     path = build_path(b.name, b.chamber, list(b.actions), b.passed, title=b.title)
 
-    hearings = [
-        {"when": h.starts_at, "type": h.type, "public": (h.type or "").lower() == "bill hearing",
-         "committee": h.committee_name, "room": h.room, "removed": h.removed_at is not None,
-         "upcoming": bool(h.starts_at and h.starts_at > now), "description": h.description}
-        for h in b.hearings
-    ]
+    hearings = []
+    seen_h: set[tuple] = set()
+    for h in b.hearings:
+        key = (h.starts_at, h.committee_id, h.type, h.removed_at is None)
+        if key in seen_h:  # same meeting listed twice in the official data
+            continue
+        seen_h.add(key)
+        hearings.append(
+            {"when": h.starts_at, "type": h.type, "public": (h.type or "").lower() == "bill hearing",
+             "committee": h.committee_name, "room": h.room, "removed": h.removed_at is not None,
+             "upcoming": bool(h.starts_at and h.starts_at > now), "description": h.description}
+        )
 
     votes = []
     rcs = db.scalars(select(RollCall).where(RollCall.bill_uid == uid).order_by(RollCall.date)).all()

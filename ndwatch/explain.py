@@ -129,6 +129,11 @@ def headline(summary: str | None, fallback: str) -> str:
 def about_line(summary: str | None, title: str | None) -> str:
     """Turn 'Relating to X.' into 'This bill deals with X.'"""
     text = (summary or "").strip()
+    # Resolutions usually have no summary; their title is already a plain sentence:
+    # "A concurrent resolution urging the United States Supreme Court to ..."
+    m = re.match(r"\s*an?\s+((?:\w+\s+){0,2}?resolution)\s+(.+)", title or "", re.I) if not text else None
+    if m:
+        return f"This is a {m.group(1).lower()} {m.group(2).strip().rstrip('.')}."
     if not text and title:
         m = re.search(r"relating to ([^;.]+)", title, re.I)
         text = f"Relating to {m.group(1)}" if m else ""

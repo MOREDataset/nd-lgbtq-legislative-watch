@@ -28,25 +28,13 @@ from ndwatch.ui.storage import previous_visit, toggle_follow
 
 
 def html(s: str) -> None:
-    st.html(s)
+    # st.html refuses an empty string (it raised an error on pages of bills with no
+    # matched wording, i.e. most bills opened from "show all bills").
+    if s and s.strip():
+        st.html(s)
 
 
 # ------------------------------------------------------------------ shared
-
-
-def database_unavailable() -> None:
-    """Shown when the app's database cannot be reached at all."""
-    st.markdown("## North Dakota LGBTQ+ Legislative Watch")
-    st.warning(
-        "**This dashboard's stored information is temporarily unavailable.** "
-        "The database it reads from could not be reached just now. Nothing here is lost; "
-        "please try again later."
-    )
-    st.markdown(
-        "In the meantime, the official source for every bill, hearing and vote is the "
-        "North Dakota Legislative Branch website: "
-        "[ndlegis.gov](https://ndlegis.gov)."
-    )
 
 
 def header() -> dict:
@@ -238,13 +226,18 @@ def bill_page(uid: str) -> None:
         f'<span class="nw-tag" style="font-size:1rem">{C.e(d["name"])}</span>{"".join(pills)}'
         f'<span style="color:var(--muted);font-size:.85rem">{C.e(kind_name(d["kind"]))} &middot; {C.e(d["session_name"])}</span></div>'
     )
-    st.markdown(f"# {headline(d['summary'], d['name'])}")
+    st.markdown(f"# {C.e(headline(d['summary'], d['title'] or d['name']))}")
     follow_button(uid, d["name"])
 
     # --- the five answers
     changes = what_would_change(d["title"])
     links = century_code_links(d["title"])
-    change_html = "".join(f"<div>• {C.e(x)}</div>" for x in changes) or "The official title does not describe the changes in a way we can summarize."
+    is_resolution = "R" in (d["kind"] or "")[1:] and not d["path"].constitutional
+    if is_resolution and not changes:
+        change_html = ("Resolutions state the Legislature's position, make requests, or direct studies. "
+                       "Unlike a bill, a resolution like this does not change North Dakota law.")
+    else:
+        change_html = "".join(f"<div>• {C.e(x)}</div>" for x in changes) or "The official title does not describe the changes in a way we can summarize."
     if links:
         change_html += '<div style="margin-top:.3rem"><small>Current law named in the title: ' + ", ".join(
             C.link(u, lab) for lab, u in links) + "</small></div>"

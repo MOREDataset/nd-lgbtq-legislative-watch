@@ -481,6 +481,13 @@ def _sync_hearings(db: DbSession, bill: Bill, api: ApiBill, writer: EventWriter,
         public = htype.lower() == "bill hearing"
         what = "a public committee hearing" if public else f"a {htype.lower()} session"
         if row is None:
+            cid = h.committee.id if h.committee else None
+            # The official data sometimes lists the same meeting twice under two ids;
+            # store both (to mirror the source) but announce it only once.
+            twin = any(
+                o.removed_at is None and o.starts_at == starts and o.committee_id == cid and o.type == h.type
+                for o in bill.hearings
+            )
             row = Hearing(
                 hearing_id=h.id, first_seen_at=now, last_seen_at=now, starts_at=starts,
                 type=h.type, committee_id=h.committee.id if h.committee else None,
@@ -489,23 +496,24 @@ def _sync_hearings(db: DbSession, bill: Bill, api: ApiBill, writer: EventWriter,
             bill.hearings.append(row)
             upcoming = starts is not None and starts > now
             verb = "is scheduled for" if (upcoming or starts is None) else "had"
-            writer.emit(
-                EventSpec(
-                    dedupe_key=f"{bill.uid}:hearing:{h.id}:new",
-                    kind="hearing_scheduled" if public else "work_session_scheduled",
-                    importance=HIGH if (public and upcoming) else (MEDIUM if public else LOW),
-                    bill_uid=bill.uid,
-                    title=f"{bill.name} {verb} {what}: {fmt_date(starts)}"
-                    + (f", {committee}" if committee else "")
-                    + (f", room {h.room}" if h.room else "")
-                    + ".",
-                    detail=None if public else "Committee work sessions are not public hearings; testimony is not taken online for them.",
-                    event_date=starts,
-                    source_url=bill.hearing_url or bill.url,
-                    source_label="Bill hearings (ndlegis.gov)",
-                ),
-                backfill=writer.backfill or (starts is not None and starts < now) or None,
-            )
+            if not twin:
+                writer.emit(
+                    EventSpec(
+                        dedupe_key=f"{bill.uid}:hearing:{h.id}:new",
+                        kind="hearing_scheduled" if public else "work_session_scheduled",
+                        importance=HIGH if (public and upcoming) else (MEDIUM if public else LOW),
+                        bill_uid=bill.uid,
+                        title=f"{bill.name} {verb} {what}: {fmt_date(starts)}"
+                        + (f", {committee}" if committee else "")
+                        + (f", room {h.room}" if h.room else "")
+                        + ".",
+                        detail=None if public else "Committee work sessions are not public hearings; testimony is not taken online for them.",
+                        event_date=starts,
+                        source_url=bill.hearing_url or bill.url,
+                        source_label="Bill hearings (ndlegis.gov)",
+                    ),
+                    backfill=writer.backfill or (starts is not None and starts < now) or None,
+                )
         else:
             if (row.starts_at, (row.room or "")) != (starts, h.room or "") and row.removed_at is None:
                 before = fmt_date(row.starts_at) + (f", room {row.room}" if row.room else "")
@@ -534,7 +542,12 @@ def _sync_hearings(db: DbSession, bill: Bill, api: ApiBill, writer: EventWriter,
     for hid, row in existing.items():
         if hid not in seen and row.removed_at is None:
             row.removed_at = now
-            if row.starts_at and row.starts_at > now:
+            twin_left = any(
+                o is not row and o.removed_at is None and o.starts_at == row.starts_at
+                and o.committee_id == row.committee_id and o.type == row.type
+                for o in bill.hearings
+            )
+            if row.starts_at and row.starts_at > now and not twin_left:
                 writer.emit(
                     EventSpec(
                         dedupe_key=f"{bill.uid}:hearing:{hid}:removed:{row.starts_at}",

@@ -115,3 +115,42 @@ def test_plain_action_wording():
     assert "both chambers" in explain_action("Passed over veto, yeas 45 nays 2", "Senate")
     assert explain_action("Something the clerk has never written before", "House") is None
     assert explain_action("", None) is None
+
+
+def test_resolution_votes_and_other_actions_are_described():
+    """Wording copied from real 2025 actions; these used to fall through to a hidden generic line."""
+    from ndwatch.events import HIGH, MEDIUM, describe_action
+
+    ev = describe_action("HCR 3013", "Second reading, adopted yeas 52 nays 40", "House")
+    assert ev.importance == HIGH and ev.title == "The House voted to adopt HCR 3013 (52 yes, 40 no)."
+    ev = describe_action("HCR 3013", "Second reading, failed to adopt", "Senate")
+    assert ev.importance == HIGH and "not adopted" in ev.title
+    ev = describe_action("SB 2261", "Passed over veto, yeas 45 nays 2", "Senate")
+    assert ev.importance == HIGH and "both chambers" in ev.title
+    assert describe_action("X", "Reported back without recommendation 6 1 0", "Senate").importance == MEDIUM
+    assert describe_action("X", "Conference committee report rejected", "House").importance == MEDIUM
+    assert describe_action("X", "Emergency clause failed", "Senate").importance == MEDIUM
+
+
+def test_all_divisions_lost_means_failed():
+    """REAL pattern (SB 2384, 2025): divided on the House floor and both parts lost."""
+    seq = [
+        A("Introduced, first reading, referred Judiciary Committee", d(1), "Senate"),
+        A("Second reading, passed, yeas 24 nays 23", d(2), "Senate"),
+        A("Received from Senate", d(3), "House"),
+        A("Reported back, do not pass, placed on calendar 8 5 1", d(4), "House"),
+        A("Division of bill", d(5), "House"),
+        A("Division A lost", d(5), "House"),
+        A("Division B lost", d(5), "House"),
+    ]
+    assert build_path("SB 2384", "Senate", seq).outcome == "failed"
+    seq[-1] = A("Division B passed", d(5), "House")
+    assert build_path("SB 2384", "Senate", seq).outcome is None
+
+
+def test_resolution_about_line_uses_title():
+    from ndwatch.explain import about_line
+
+    t = "A concurrent resolution urging the United States Supreme Court to restore the definition of marriage."
+    assert about_line(None, t) == "This is a " + t[2:]
+    assert about_line("Relating to schools.", "AN ACT ...") == "This bill deals with schools."

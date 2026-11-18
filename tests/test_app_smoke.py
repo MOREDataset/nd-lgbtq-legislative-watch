@@ -120,3 +120,28 @@ def test_unreachable_database_shows_plain_message(monkeypatch, tmp_path):
     runtime.clear_cache()
     assert not at.exception, at.exception
     assert any("temporarily unavailable" in w.value for w in at.warning)
+    # The maintainer gets a short, safe reason to act on.
+    assert any("Reason:" in c.value and "OperationalError" in c.value for c in at.caption)
+
+
+def test_database_notice_never_reveals_secrets():
+    import sqlalchemy.exc
+
+    src = (ROOT / "streamlit_app.py").read_text()
+    start = src.index("def _address_hint")
+    end = src.index("def _database_unavailable")
+    ns: dict = {}
+    exec("import re\nfrom urllib.parse import urlsplit\n" + src[start:end], ns)
+    url = "postgresql+psycopg://owner:s3cretPW@ep-wispy-bush-a5xyz123-pooler.us-east-2.aws.neon.tech/db?sslmode=require"
+    hint = ns["_address_hint"](url)
+    assert "xyz123" in hint and "pooled" in hint
+    assert "s3cretPW" not in hint and "owner" not in hint and "neon.tech" not in hint
+    orig = Exception(
+        'connection to server at "ep-wispy-bush-a5xyz123.us-east-2.aws.neon.tech" (3.18.1.2), '
+        "port 5432 failed: ERROR: Your account or project has exceeded the compute time quota."
+    )
+    err = sqlalchemy.exc.OperationalError("SELECT 1", {}, orig)
+    reason = ns["_short_reason"](err)
+    assert "exceeded the compute time quota" in reason
+    assert "neon.tech" not in reason and "3.18.1.2" not in reason and "a5xyz123" not in reason
+    assert "local sqlite file" in ns["_address_hint"]("sqlite:///data/ndwatch.db")
